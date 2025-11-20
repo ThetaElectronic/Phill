@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class IncidentBase(BaseModel):
+    company_id: str
+    user_id: str
     type: str
     description: str = Field(..., min_length=3)
     status: str = Field(default="open")
@@ -15,8 +17,6 @@ class IncidentCreate(IncidentBase):
 
 class IncidentRead(IncidentBase):
     id: str
-    company_id: str
-    user_id: str
     created_at: datetime
 
     class Config:

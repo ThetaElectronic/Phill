@@ -5,9 +5,9 @@ from app.users.models import User
 from app.users.schemas import UserCreate
 
 
-def create_user(payload: UserCreate, session: Session, company_id: str) -> User:
+def create_user(payload: UserCreate, session: Session) -> User:
     user = User(
-        company_id=company_id,
+        company_id=payload.company_id,
         email=payload.email,
         username=payload.username,
         name=payload.name,

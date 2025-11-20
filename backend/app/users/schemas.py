@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class UserBase(BaseModel):
+    company_id: str = Field(..., min_length=1)
     email: EmailStr
     username: str = Field(..., min_length=3)
     name: str = Field(..., min_length=1)
@@ -11,12 +12,10 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    company_id: str | None = Field(default=None, min_length=1)
     password: str = Field(..., min_length=8)
 
 
 class UserRead(UserBase):
-    company_id: str
     id: str
     disabled: bool
     created_at: datetime
