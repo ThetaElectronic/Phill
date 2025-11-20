@@ -4,7 +4,7 @@ const nextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
   experimental: {
-    serverActions: {},
+    serverActions: true,
   },
 };
 

@@ -8,7 +8,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - Python 3.12 (only needed for running the backend without Docker)
 
 ## Quick start (Docker)
-1. Copy the environment template to the repository root (it will be loaded by Docker Compose via `env_file`) and fill in secrets:
+1. Copy the environment template and fill in secrets:
    ```bash
    cp .env.example .env
    ```
@@ -22,10 +22,10 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 ## Run frontend locally (without Docker)
 ```bash
 cd frontend
-npm install --legacy-peer-deps
+npm install
 npm run dev
 ```
-The app will be available at http://localhost:3000. (React 19 release candidates currently require `--legacy-peer-deps`.)
+The app will be available at http://localhost:3000.
 
 ## Run backend locally (without Docker)
 ```bash
