@@ -1,5 +1,4 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlmodel import Session, select
 
@@ -7,10 +6,8 @@ from app.db import get_session
 from app.security.tokens import TokenType, decode_token
 from app.users.models import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
-
-def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)) -> User:
+def get_current_user(token: str, session: Session = Depends(get_session)) -> User:
     try:
         payload = decode_token(token)
     except JWTError:
