@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import uuid4
 
 from sqlmodel import Column, DateTime, Field, SQLModel
 
