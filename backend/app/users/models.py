@@ -1,14 +1,11 @@
 from datetime import datetime
-from uuid import uuid4
 
 from sqlmodel import Column, DateTime, Field, SQLModel
 
 
 class User(SQLModel, table=True):
-    __tablename__ = "users"
-
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    company_id: str = Field(foreign_key="companies.id", index=True)
+    id: str | None = Field(default=None, primary_key=True)
+    company_id: str = Field(index=True)
     email: str = Field(index=True, unique=True)
     username: str = Field(index=True, unique=True)
     name: str
