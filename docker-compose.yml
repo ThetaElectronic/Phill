@@ -16,17 +16,14 @@ services:
       - db
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+    build: ./frontend
     container_name: phill-frontend
     env_file:
       - ./.env
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
+      - NEXT_PUBLIC_API_URL=http://backend:8001
 
   db:
     image: postgres:16
