@@ -1,0 +1,21 @@
+from sqlmodel import Session
+
+from app.security.password import hash_password
+from app.users.models import User
+from app.users.schemas import UserCreate
+
+
+def create_user(payload: UserCreate, session: Session, company_id: str) -> User:
+    username = payload.username or payload.email
+    user = User(
+        company_id=company_id,
+        email=payload.email,
+        username=username,
+        name=payload.name,
+        role=payload.role,
+        password_hash=hash_password(payload.password),
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
