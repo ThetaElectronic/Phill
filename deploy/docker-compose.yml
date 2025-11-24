@@ -2,7 +2,6 @@ services:
   backend:
     build:
       context: ${COMPOSE_FILE_DIR:-.}/../backend
-    container_name: phill-backend
     restart: unless-stopped
     env_file:
       - ${COMPOSE_FILE_DIR:-.}/../.env
@@ -26,7 +25,6 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
         NEXT_BACKEND_URL: ${NEXT_BACKEND_URL:-http://backend:8001}
-    container_name: phill-frontend
     restart: unless-stopped
     env_file:
       - ${COMPOSE_FILE_DIR:-.}/../.env
@@ -45,7 +43,6 @@ services:
 
   db:
     image: postgres:16
-    container_name: phill-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: phill
@@ -61,7 +58,6 @@ services:
 
   nginx:
     image: nginx
-    container_name: phill-nginx
     restart: unless-stopped
     depends_on:
       - backend

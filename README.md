@@ -25,6 +25,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
    docker compose up --build
    ```
    > Prefer the root `docker-compose.yml` unless you have a reason to run from `deploy/`; it uses the same services without needing relative `../` paths.
+   - Container names are no longer hardcoded. If you previously ran a stack that set `container_name` (e.g., `phill-db`, `phill-backend`), stop and remove those containers first to avoid name conflicts: `docker rm -f phill-backend phill-frontend phill-db phill-nginx` (or `docker compose -p phill down` if you started with that project name).
 3. Open the app through Nginx at http://localhost (the API is proxied at `/api`). If you want to reach the backend directly, use http://localhost:8001 (with `/docs` for Swagger) or http://localhost:8001/health for a lightweight check.
    - Verify containers: `docker compose ps`
    - Wait for health checks: backend/db/frontend declare health checks; `docker inspect --format='{{json .State.Health.Status}}' phill-backend` (or frontend/db) should report `healthy` before testing the site.
