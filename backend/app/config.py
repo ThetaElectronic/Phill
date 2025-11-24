@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(..., alias="JWT_SECRET")
     jwt_expire_minutes: int = Field(30, alias="JWT_EXPIRE_MINUTES")
     jwt_refresh_expire_days: int = Field(30, alias="JWT_REFRESH_EXPIRE_DAYS")
+    password_reset_expire_minutes: int = Field(30, alias="PASSWORD_RESET_EXPIRE_MINUTES")
     password_pepper: str = Field(..., alias="PASSWORD_PEPPER")
 
     smtp_host: str | None = Field(None, alias="SMTP_HOST")

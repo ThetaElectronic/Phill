@@ -1,17 +1,23 @@
 from datetime import datetime
 
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
+from app.config import get_settings
 from app.db import get_session
-from app.security.password import verify_password
+from app.security.password import hash_password, verify_password
 from app.security.tokens import TokenType, create_access_token, create_refresh_token, decode_token
-from app.users.models import AccessRequest, PasswordResetRequest, User
+from app.users.models import AccessRequest, PasswordResetRequest, PasswordResetToken, User
 
 router = APIRouter()
+settings = get_settings()
 
 
 class PasswordResetRequestPayload(BaseModel):
@@ -21,6 +27,11 @@ class PasswordResetRequestPayload(BaseModel):
 class AccessRequestPayload(BaseModel):
     email: EmailStr
     note: str | None = None
+
+
+class ConfirmResetPayload(BaseModel):
+    token: str
+    new_password: str
 
 
 @router.post("/token")
@@ -78,8 +89,27 @@ def request_password_reset(
         created_at=datetime.utcnow(),
     )
     session.add(record)
+
+    user = session.exec(select(User).where(User.email == payload.email)).first()
+    debug_token: str | None = None
+    if user:
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.password_reset_expire_minutes)
+        token = PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+        session.add(token)
+        if settings.env != "production":
+            debug_token = raw_token
+
     session.commit()
-    return {"status": "accepted"}
+    response = {"status": "accepted"}
+    if debug_token:
+        response["debug_token"] = debug_token
+    return response
 
 
 @router.post("/request-access", status_code=status.HTTP_202_ACCEPTED)
@@ -98,3 +128,31 @@ def request_access(
     session.add(record)
     session.commit()
     return {"status": "accepted"}
+
+
+@router.post("/confirm-reset")
+def confirm_password_reset(
+    payload: ConfirmResetPayload, session: Session = Depends(get_session)
+) -> dict[str, str]:
+    token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
+    now = datetime.now(timezone.utc)
+    token = session.exec(
+        select(PasswordResetToken)
+        .where(PasswordResetToken.token_hash == token_hash)
+        .where(PasswordResetToken.used_at.is_(None))
+        .where(PasswordResetToken.expires_at >= now)
+    ).first()
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+
+    user = session.exec(select(User).where(User.id == token.user_id)).first()
+    if not user or user.disabled:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+
+    user.password_hash = hash_password(payload.new_password)
+    token.used_at = now
+    session.add(user)
+    session.add(token)
+    session.commit()
+    return {"status": "reset"}

@@ -11,6 +11,8 @@ const initialForm = { email: "", password: "" };
 function InlineActions({ onReset }) {
   const [email, setEmail] = useState("");
   const [requestEmail, setRequestEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState(null);
   const [status, setStatus] = useState({ state: "idle" });
 
@@ -58,12 +60,22 @@ function InlineActions({ onReset }) {
     handleAction("/auth/request-access", { email: requestEmail }, "We received your access request.");
   };
 
+  const handleConfirmReset = (event) => {
+    event.preventDefault();
+    handleAction(
+      "/auth/confirm-reset",
+      { token: resetToken, new_password: newPassword },
+      "Password updated. Sign in with your new credentials."
+    );
+  };
+
   return (
     <div className="card glass minimal-actions">
       <div className="stack" style={{ gap: "0.5rem" }}>
-        <h3 style={{ margin: 0 }}>Need help?</h3>
+        <h3 style={{ margin: 0 }}>Account help</h3>
         <p className="muted tiny" style={{ margin: 0 }}>
-          Forgot your password or need an invite? Use the quick actions below. Everything else stays hidden until you sign in.
+          Send a reset link, request access, or complete a reset with the token you received. Only the login surface is visible
+          until you authenticate.
         </p>
       </div>
       <div className="grid two-col" style={{ gap: "0.75rem" }}>
@@ -101,6 +113,37 @@ function InlineActions({ onReset }) {
           </button>
         </form>
       </div>
+
+      <form className="stack" onSubmit={handleConfirmReset} style={{ gap: "0.35rem" }}>
+        <div className="grid two-col" style={{ gap: "0.5rem" }}>
+          <label className="stack" style={{ gap: "0.25rem" }}>
+            Reset token
+            <input
+              type="text"
+              required
+              value={resetToken}
+              onChange={(event) => setResetToken(event.target.value)}
+              placeholder="Paste the token from your email"
+              autoComplete="off"
+            />
+          </label>
+          <label className="stack" style={{ gap: "0.25rem" }}>
+            New password
+            <input
+              type="password"
+              required
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="••••••••"
+              autoComplete="new-password"
+            />
+          </label>
+        </div>
+        <button type="submit" className="ghost">
+          Confirm reset
+        </button>
+      </form>
+
       {message && <div className="status-info">{message}</div>}
       {status.state === "error" && <div className="status-error">{status.message}</div>}
     </div>
