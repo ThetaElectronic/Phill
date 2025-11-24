@@ -2,22 +2,25 @@ version: "3.9"
 
 services:
   backend:
-    build: ../backend
-    container_name: phill-backend
-    env_file:
-      - ../.env
-    environment:
-      - ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    ports:
-      - "8001:8001"
-    depends_on:
-      - db
+   build: ../backend
+   container_name: phill-backend
+   env_file:
+     - ../.env
+   environment:
+     - ENV=production
+     - DATABASE_URL=${DATABASE_URL}
+     - OPENAI_API_KEY=${OPENAI_API_KEY}
+     - FRONTEND_URL=${FRONTEND_URL}
+   ports:
+     - "8001:8001"
+   depends_on:
+     - db
 
   frontend:
-    build: ../frontend
+    build: ./frontend
     container_name: phill-frontend
+    env_file:
+      - ./.env
     ports:
       - "3000:3000"
     environment:
@@ -41,9 +44,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../frontend/out:/usr/share/nginx/html:ro
-      - ./ssl:/ssl
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/ssl:/ssl
 
 volumes:
   phill_db:
