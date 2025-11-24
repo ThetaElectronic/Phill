@@ -1,0 +1,10 @@
+{
+  "name": "phill-root",
+  "private": true,
+  "scripts": {
+    "install:frontend": "npm install --legacy-peer-deps --prefix frontend",
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run start --prefix frontend"
+  }
+}
