@@ -1,5 +1,3 @@
-import "./globals.css";
-
 export const metadata = {
   title: "Phill Platform",
   description: "Secure multi-company operations platform",
@@ -8,31 +6,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
-        <header>
-          <div className="shell brand-row">
-            <div style={{ display: "grid", gap: "0.25rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <div className="pill">Phill Platform</div>
-                <span className="muted tiny">2025 rebuild scaffold</span>
-              </div>
-              <div className="muted tiny">
-                FastAPI backend · Next.js 15 frontend · Multi-company isolation
-              </div>
-            </div>
-            <nav className="nav">
-              <a href="/login">Login</a>
-              <a href="/dashboard">Dashboard</a>
-              <a href="/incidents/create">Incidents</a>
-              <a href="/documents">Documents</a>
-              <a href="/ai">Phill AI</a>
-              <a href="/admin/system">Admin</a>
-            </nav>
-          </div>
+      <body style={{ fontFamily: "sans-serif", margin: 0 }}>
+        <header style={{ padding: "1rem", borderBottom: "1px solid #eee" }}>
+          <strong>Phill</strong>
         </header>
-        <main className="main-content">
-          <div className="shell">{children}</div>
-        </main>
+        <main style={{ padding: "1rem" }}>{children}</main>
       </body>
     </html>
   );
