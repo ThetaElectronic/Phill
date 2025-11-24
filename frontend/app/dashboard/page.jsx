@@ -1,9 +1,14 @@
+"use client";
+
+import AuthWall from "../../components/AuthWall";
+
 export default function DashboardPage() {
   return (
-    <section className="grid" style={{ gap: "1.5rem" }}>
-      <div className="card gradient-card" style={{ position: "relative", overflow: "hidden" }}>
-        <div
-          style={{
+    <AuthWall title="Dashboard is protected" description="Sign in to explore the dashboard panels and activity cards.">
+      <section className="grid" style={{ gap: "1.5rem" }}>
+        <div className="card gradient-card" style={{ position: "relative", overflow: "hidden" }}>
+          <div
+            style={{
             position: "absolute",
             inset: 0,
             background: "radial-gradient(circle at 22% 30%, rgba(255,255,255,0.14) 0, transparent 38%), radial-gradient(circle at 82% 16%, rgba(255,255,255,0.18) 0, transparent 32%)",
@@ -132,6 +137,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </section>
+      </section>
+    </AuthWall>
   );
 }

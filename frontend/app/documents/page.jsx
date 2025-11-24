@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import AuthWall from "../../components/AuthWall";
 import { bearerHeaders, loadTokens } from "../../lib/auth";
 import { apiUrl } from "../../lib/api";
 
@@ -90,7 +91,8 @@ export default function DocumentsPage() {
   };
 
   return (
-    <section className="grid" style={{ gap: "1.5rem" }}>
+    <AuthWall title="Documents are protected" description="Sign in to upload and browse your company’s documents.">
+      <section className="grid" style={{ gap: "1.5rem" }}>
       <div className="stack">
         <div className="badge-list">
           <span className="pill">Documents</span>
@@ -168,6 +170,7 @@ export default function DocumentsPage() {
           {uploadState.status === "success" && <div className="status-success tiny">{uploadState.message}</div>}
         </div>
       </div>
-    </section>
+      </section>
+    </AuthWall>
   );
 }

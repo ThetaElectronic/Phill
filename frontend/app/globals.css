@@ -682,3 +682,21 @@ form {
 .floating-badges .pill {
   box-shadow: 0 16px 40px rgba(37, 99, 235, 0.25);
 }
+
+
+/* Auth wall overlays */
+.lock-wall {
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.45));
+  box-shadow: 0 10px 60px rgba(0, 0, 0, 0.35);
+}
+
+.lock-wall .pill-error {
+  background: linear-gradient(120deg, rgba(248, 113, 113, 0.18), rgba(239, 68, 68, 0.12));
+  color: #fecdd3;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.lock-wall button.ghost {
+  align-self: flex-start;
+}

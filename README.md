@@ -28,6 +28,41 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
    - Check Nginx proxy health: `curl http://localhost/healthz`
    - The homepage shows API reachability using `NEXT_PUBLIC_API_URL`; if it reports unreachable, confirm your `.env` values and rebuild or restart.
 
+## Bootstrap a founder login (one-time)
+- The users API requires an authenticated manager/founder to create additional accounts. For the first bootstrap, create a founder directly in the database from the backend container:
+
+  ```bash
+  docker compose exec backend python - <<'PY'
+from sqlmodel import Session
+from uuid import uuid4
+
+from app.db import engine
+from app.companies.models import Company
+from app.security.password import hash_password
+from app.users.models import User
+from app.users.permissions import ROLE_FOUNDER
+
+company = Company(id=str(uuid4()), name="Jarvis Fuel", domain="jarvis-fuel.com")
+founder = User(
+    company_id=company.id,
+    email="founder@app.jarvis-fuel.com",
+    username="founder",
+    name="Founding Admin",
+    role=ROLE_FOUNDER,
+    password_hash=hash_password("CHANGE_ME_STRONG"),
+)
+
+with Session(engine) as session:
+    session.add(company)
+    session.add(founder)
+    session.commit()
+    print("Created founder:", founder.email)
+  PY
+  ```
+
+- After running the script, sign in at `/login` with the email/password you set above. Use the Tokens box on the login page to verify access and hit protected routes.
+- Rotate the password immediately after testing and store it in a secret manager.
+
 ## Run frontend locally (without Docker)
 ```bash
 cd frontend

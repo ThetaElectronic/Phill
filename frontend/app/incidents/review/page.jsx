@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import AuthWall from "../../../components/AuthWall";
 import { bearerHeaders, loadTokens } from "../../../lib/auth";
 import { apiUrl } from "../../../lib/api";
 
@@ -71,46 +72,48 @@ export default function ReviewIncidentsPage() {
   const needsAuth = !tokens;
 
   return (
-    <section className="grid" style={{ gap: "1.5rem" }}>
-      <div className="stack">
-        <div className="badge-list">
-          <span className="pill">Incidents</span>
-          <span className="pill pill-outline">Review</span>
-        </div>
-        <h1 style={{ margin: 0 }}>Review incidents</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          This view fetches live incidents from <code>{listUrl}</code>. You’ll only see incidents for your company, and
-          non-supervisors will be restricted to their own reports.
-        </p>
-      </div>
-
-      <div className="card stack" style={{ gap: "1rem" }}>
-        <div className="stack" style={{ gap: "0.25rem" }}>
-          <h2 style={{ margin: 0 }}>Incoming queue</h2>
-          <p className="muted tiny" style={{ margin: 0 }}>
-            Requires a valid bearer token. Log in, then refresh this page to pull your company’s incidents.
+    <AuthWall title="Incident review is protected" description="Sign in to view and filter incidents for your company.">
+      <section className="grid" style={{ gap: "1.5rem" }}>
+        <div className="stack">
+          <div className="badge-list">
+            <span className="pill">Incidents</span>
+            <span className="pill pill-outline">Review</span>
+          </div>
+          <h1 style={{ margin: 0 }}>Review incidents</h1>
+          <p className="muted" style={{ margin: 0 }}>
+            This view fetches live incidents from <code>{listUrl}</code>. You’ll only see incidents for your company, and
+            non-supervisors will be restricted to their own reports.
           </p>
         </div>
-        <div className="divider" />
 
-        {needsAuth && <div className="status-info">Sign in to load incidents. Tokens are stored locally.</div>}
-
-        {state.status === "loading" && <div className="status-info">Loading incidents…</div>}
-
-        {state.status === "error" && <div className="status-error">{state.message || "Unable to load incidents"}</div>}
-
-        {state.status === "success" && incidents.length === 0 && (
-          <div className="muted tiny">No incidents to show yet.</div>
-        )}
-
-        {state.status === "success" && incidents.length > 0 && (
-          <div className="grid" style={{ gap: "0.75rem" }}>
-            {incidents.map((incident) => (
-              <IncidentCard key={incident.id} incident={incident} />
-            ))}
+        <div className="card stack" style={{ gap: "1rem" }}>
+          <div className="stack" style={{ gap: "0.25rem" }}>
+            <h2 style={{ margin: 0 }}>Incoming queue</h2>
+            <p className="muted tiny" style={{ margin: 0 }}>
+              Requires a valid bearer token. Log in, then refresh this page to pull your company’s incidents.
+            </p>
           </div>
-        )}
-      </div>
-    </section>
+          <div className="divider" />
+
+          {needsAuth && <div className="status-info">Sign in to load incidents. Tokens are stored locally.</div>}
+
+          {state.status === "loading" && <div className="status-info">Loading incidents…</div>}
+
+          {state.status === "error" && <div className="status-error">{state.message || "Unable to load incidents"}</div>}
+
+          {state.status === "success" && incidents.length === 0 && (
+            <div className="muted tiny">No incidents to show yet.</div>
+          )}
+
+          {state.status === "success" && incidents.length > 0 && (
+            <div className="grid" style={{ gap: "0.75rem" }}>
+              {incidents.map((incident) => (
+                <IncidentCard key={incident.id} incident={incident} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </AuthWall>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import AuthWall from "../../../components/AuthWall";
 import { bearerHeaders, loadTokens } from "../../../lib/auth";
 import { apiUrl } from "../../../lib/api";
 
@@ -55,10 +56,11 @@ export default function CreateIncidentPage() {
   const resetForm = () => setForm(initialForm);
 
   return (
-    <section className="grid" style={{ gap: "1.5rem" }}>
-      <div className="stack">
-        <div className="badge-list">
-          <span className="pill">Incidents</span>
+    <AuthWall title="Incidents require login" description="Authenticate to submit incidents with your company scope.">
+      <section className="grid" style={{ gap: "1.5rem" }}>
+        <div className="stack">
+          <div className="badge-list">
+            <span className="pill">Incidents</span>
           <span className="pill pill-warning">Workflow</span>
         </div>
         <h1 style={{ margin: 0 }}>Create incident</h1>
@@ -137,6 +139,7 @@ export default function CreateIncidentPage() {
 
         {!tokens && <div className="status-info">Sign in first to include your bearer token.</div>}
       </div>
-    </section>
+      </section>
+    </AuthWall>
   );
 }

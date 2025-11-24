@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import AuthWall from "../../components/AuthWall";
 import { bearerHeaders, loadTokens } from "../../lib/auth";
 import { apiUrl } from "../../lib/api";
 
@@ -78,7 +79,8 @@ export default function AIPage() {
   };
 
   return (
-    <section className="grid" style={{ gap: "1.5rem" }}>
+    <AuthWall title="Phill AI requires login" description="Sign in to send prompts with your company scope and audit trail.">
+      <section className="grid" style={{ gap: "1.5rem" }}>
       <div className="stack">
         <div className="badge-list">
           <span className="pill">Phill AI</span>
@@ -170,6 +172,7 @@ export default function AIPage() {
           )}
         </div>
       </div>
-    </section>
+      </section>
+    </AuthWall>
   );
 }
