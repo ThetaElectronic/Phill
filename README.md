@@ -48,6 +48,21 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - Rotate the password immediately after testing and store it in a secret manager.
 - `PASSWORD_RESET_EXPIRE_MINUTES` controls how long reset tokens stay valid (default 30 minutes).
 
+### Create Nathaniel's admin account
+- To bootstrap `Nathaniel Wilson` with email-based login on the live stack, run this from the repo root (values provided by Nathaniel; update later if needed):
+
+  ```bash
+  docker compose exec backend \
+    BOOTSTRAP_COMPANY="Guardian FuelTech" \
+    BOOTSTRAP_DOMAIN="guardianfueltech.com" \
+    BOOTSTRAP_EMAIL="nathanielwilson@guardianfueltech.com" \
+    BOOTSTRAP_PASSWORD="Genesistheta2013!" \
+    BOOTSTRAP_NAME="Nathaniel Wilson" \
+    python scripts/bootstrap_user.py --role admin
+  ```
+
+- The script is idempotent: if the user already exists, it leaves the record intact and simply reports the email. Sign in at `/login` with the email/password above and rotate the password immediately after confirming access.
+
 ### Self-service auth requests (login page)
 - The login page now sends **password reset** and **access requests** to the backend via `/api/auth/request-reset` and `/api/auth/request-access`.
 - Requests are stored server-side (email, IP, user-agent) for follow-up; responses always return `202 Accepted` without revealing whether an account exists.
