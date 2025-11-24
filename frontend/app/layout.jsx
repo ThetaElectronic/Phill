@@ -1,4 +1,5 @@
 import "./globals.css";
+import SessionIndicator from "../components/SessionIndicator";
 
 export const metadata = {
   title: "Phill Platform",
@@ -44,6 +45,7 @@ export default function RootLayout({ children }) {
                 <a className="chip" href="/ai">Phill AI</a>
                 <a className="chip" href="/admin/system">Admin</a>
               </nav>
+              <SessionIndicator />
             </div>
           </header>
           <main className="main-content">
