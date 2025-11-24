@@ -137,7 +137,7 @@ cp .env.example .env
 - Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults.
 
 4) Provide TLS certs for the origin so Cloudflare can connect on port 443 (prevents 521 errors):
-   - Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (for Cloudflare Origin Certs, download the PEM + key and save them here).
+   - A placeholder Cloudflare Origin certificate is committed at `deploy/ssl/fullchain.pem` with its key at `deploy/ssl/privkey.pem` so Nginx will boot even before you install your own certs. Replace both files with your actual certificate and private key before going live.
    - Keep Cloudflare in **Full (Strict)** or **Full** mode so it reaches the origin over HTTPS.
    - Port 80 is kept open only to redirect to HTTPS and to serve `/healthz`.
 
