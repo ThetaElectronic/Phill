@@ -45,6 +45,10 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - After running the script, sign in at `/login` with the credentials you provided. Use the Tokens box on the login page to verify access and hit protected routes.
 - Rotate the password immediately after testing and store it in a secret manager.
 
+## Previewing locked pages without a session
+- Protected pages now render a blurred, non-interactive preview when you are logged out. You can see the layout and navigation, but all interactions stay blocked until you sign in.
+- Use `/login` to fetch a JWT/refresh pair, then reload any page to remove the lock overlay. Clear stale tokens from the lock prompt if you ever see inconsistent session state.
+
 ## Run frontend locally (without Docker)
 ```bash
 cd frontend

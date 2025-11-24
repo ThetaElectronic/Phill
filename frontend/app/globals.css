@@ -685,6 +685,39 @@ form {
 
 
 /* Auth wall overlays */
+.locked-preview-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.locked-preview {
+  border-radius: 1.1rem;
+  padding: 1rem;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.4), rgba(37, 99, 235, 0.1));
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.locked-preview::after {
+  content: "Preview only";
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.75);
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.locked-preview-inner {
+  pointer-events: none;
+  filter: blur(1px);
+  opacity: 0.7;
+}
+
 .lock-wall {
   border: 1px dashed rgba(255, 255, 255, 0.08);
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.45));
