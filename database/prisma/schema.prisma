@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id          String    @id @default(cuid())
+  name        String
+  domain      String     @unique
+  createdAt   DateTime @default(now())
+  settings    Json?
+
+  users       User[]
+  incidents   Incident[]
+  documents   Document[]
+  tickets     Ticket[]
+  aiMemory    AiMemory[]
+}
+
+model User {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company @relation(fields: [companyId], references: [id])
+  email       String   @unique
+  username    String   @unique
+  name        String
+  role        String
+  passwordHash String
+  createdAt   DateTime @default(now())
+  disabled    Boolean  @default(false)
+}
+
+model Incident {
+  id         String   @id @default(cuid())
+  companyId  String
+  userId     String
+  type       String
+  description String
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
+
+  company    Company @relation(fields: [companyId], references: [id])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  path       String
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  company    Company @relation(fields: [companyId], references: [id])
+}
+
+model Ticket {
+  id         String   @id @default(cuid())
+  companyId  String
+  userId     String
+  subject    String
+  message    String
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
+
+  company    Company @relation(fields: [companyId], references: [id])
+}
+
+model AiMemory {
+  id         String   @id @default(cuid())
+  companyId  String
+  data       Json
+  createdAt  DateTime @default(now())
+
+  company    Company @relation(fields: [companyId], references: [id])
+}
