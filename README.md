@@ -171,3 +171,4 @@ The frontend currently contains page stubs for login, dashboard, incidents, docu
 - Protected pages now redirect unauthenticated visitors to `/login?next=<path>` using cookies set during login.
 - The login form accepts email for the username field and stores access + refresh tokens in cookies/localStorage; keep `NEXT_PUBLIC_API_URL` aligned so the token call hits the backend.
 - After running `bootstrap_admin.py`, sign in via `/login` with the admin email/password, then revisit protected URLs (dashboard, incidents, tickets, documents, AI) to confirm redirects clear and data loads.
+- Admins can review inbound access + reset submissions at `/admin/requests` after signing in; the lists are empty until users send requests from the login page.

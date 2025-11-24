@@ -34,7 +34,7 @@ export default async function RootLayout({ children }) {
                     <a className="chip" href="/incidents/create">Incidents</a>
                     <a className="chip" href="/documents">Documents</a>
                     <a className="chip" href="/ai">Phill AI</a>
-                    <a className="chip" href="/admin/system">Admin</a>
+                    <a className="chip" href="/admin/requests">Admin</a>
                   </nav>
                   <SessionIndicator />
                 </div>
