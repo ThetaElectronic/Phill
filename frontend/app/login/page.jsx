@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { clearTokens, loadTokens, storeTokens } from "../../lib/auth";
-import { apiUrl, getApiBase } from "../../lib/api";
+import { apiUrl } from "../../lib/api";
 
 const initialForm = { email: "", password: "" };
 
@@ -78,7 +78,6 @@ function ForgotRequestPanels({ onReset }) {
 }
 
 function LoginForm() {
-  const apiBase = getApiBase();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams?.get("next") || "/dashboard";
@@ -127,13 +126,13 @@ function LoginForm() {
   };
 
   return (
-    <div className="stack" style={{ gap: "1.25rem" }}>
-      <div className="card glass stack" style={{ gap: "0.9rem", padding: "1.75rem" }}>
+    <div className="login-wrap">
+      <div className="card glass stack login-card">
         <div className="stack" style={{ gap: "0.35rem" }}>
           <span className="pill soft">Phill</span>
           <h1 style={{ margin: 0 }}>Sign in</h1>
           <p className="muted" style={{ margin: 0 }}>
-            A clean, private entry point. Use your work email and password to access the workspace.
+            Use your work email to enter the workspace. Everything stays hidden until you authenticate.
           </p>
         </div>
         <form className="grid" style={{ gap: "0.85rem" }} onSubmit={handleSubmit}>
@@ -165,7 +164,6 @@ function LoginForm() {
             {status.state === "loading" ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <div className="tiny muted">API: {apiBase}</div>
         {status.state === "error" && <div className="status-error">{status.message || "Unable to sign in"}</div>}
         {status.state === "success" && <div className="status-success">Redirecting…</div>}
       </div>

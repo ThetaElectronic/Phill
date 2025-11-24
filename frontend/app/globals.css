@@ -34,6 +34,29 @@ body {
   color: var(--text);
 }
 
+.auth-only {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 3rem 1.5rem;
+}
+
+.auth-shell {
+  width: 100%;
+  max-width: 720px;
+}
+
+.login-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login-card {
+  padding: 1.85rem;
+  backdrop-filter: blur(20px);
+}
+
 .gradient-shell {
   background: radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.14) 0, transparent 30%),
     radial-gradient(circle at 85% 10%, rgba(14, 165, 233, 0.14) 0, transparent 30%),

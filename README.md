@@ -29,8 +29,8 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
    - Check Nginx proxy health: `curl http://localhost/healthz`
    - The homepage shows API reachability using `NEXT_PUBLIC_API_URL`; if it reports unreachable, confirm your `.env` values and rebuild or restart.
 
-## Bootstrap a founder login (one-time)
-- The users API requires an authenticated manager/founder to create additional accounts. Use the built-in bootstrap script to seed the first founder without writing inline Python:
+## Bootstrap a private owner login (one-time)
+- The users API requires an authenticated manager/owner to create additional accounts. Use the built-in bootstrap script to seed the first owner (founder role in the API) without writing inline Python:
 
   ```bash
   docker compose exec backend python scripts/bootstrap_founder.py \
@@ -42,12 +42,12 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   ```
 
 - The script is idempotent: if a user already exists for that email, it leaves the record intact and simply reports the email.
-- After running the script, sign in at `/login` with the credentials you provided. Use the Tokens box on the login page to verify access and hit protected routes.
+- After running the script, sign in at `/login` with the credentials you provided. Protected routes stay hidden until authentication succeeds.
 - Rotate the password immediately after testing and store it in a secret manager.
 
-## Previewing locked pages without a session
-- Protected pages now render a blurred, non-interactive preview when you are logged out. You can see the layout and navigation, but all interactions stay blocked until you sign in.
-- Use `/login` to fetch a JWT/refresh pair, then reload any page to remove the lock overlay. Clear stale tokens from the lock prompt if you ever see inconsistent session state.
+## Protected pages are fully hidden until login
+- Unauthenticated visitors are redirected to `/login` and do not see navigation, footer links, or content previews.
+- Once signed in, the full app shell and pages (dashboard, incidents, documents, AI, admin) become available based on role.
 
 ## Run frontend locally (without Docker)
 ```bash

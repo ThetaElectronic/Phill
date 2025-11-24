@@ -4,7 +4,7 @@ import AuthWall from "../../../components/AuthWall";
 
 export default function AdminEmailPage() {
   return (
-    <AuthWall title="Email admin is protected" description="Login as an admin or founder to manage outbound templates and tests.">
+    <AuthWall title="Email admin is protected" description="Login with admin permissions to manage outbound templates and tests.">
       <section className="stack" style={{ gap: "0.75rem" }}>
         <div className="badge-list">
           <span className="pill">Admin</span>

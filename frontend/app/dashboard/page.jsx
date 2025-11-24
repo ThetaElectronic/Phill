@@ -100,7 +100,7 @@ export default async function DashboardPage() {
               <div className="stack accent-rail">
                 <strong>Role-aware views</strong>
                 <span className="muted tiny">
-                  Lock widgets by user role so supervisors and founders see tailored stats once tokens are stored.
+                  Lock widgets by user role so supervisors and admins see tailored stats once tokens are stored.
                 </span>
               </div>
               <div className="divider" />

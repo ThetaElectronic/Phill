@@ -4,7 +4,7 @@ import AuthWall from "../../../components/AuthWall";
 
 export default function AdminSystemPage() {
   return (
-    <AuthWall title="Admin system panel is protected" description="Login as an admin or founder to view system checks and metrics.">
+    <AuthWall title="Admin system panel is protected" description="Login with admin permissions to view system checks and metrics.">
       <section className="stack" style={{ gap: "0.75rem" }}>
         <div className="badge-list">
           <span className="pill">Admin</span>

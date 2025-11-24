@@ -15,19 +15,19 @@ export default async function RootLayout({ children }) {
     <html lang="en">
       <body>
         <div className="bg-grid gradient-shell">
-          <header className="glass">
-            <div className="shell brand-row" style={{ justifyContent: "space-between" }}>
-              <div className="brand-mark">
-                <div className="orb" aria-hidden />
-                <div className="stack" style={{ gap: "0.15rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <div className="pill">Phill</div>
-                    <span className="muted tiny">Secure workspace</span>
+          {isAuthed && (
+            <header className="glass">
+              <div className="shell brand-row" style={{ justifyContent: "space-between" }}>
+                <div className="brand-mark">
+                  <div className="orb" aria-hidden />
+                  <div className="stack" style={{ gap: "0.15rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div className="pill">Phill</div>
+                      <span className="muted tiny">Secure workspace</span>
+                    </div>
+                    <div className="muted tiny">Fast, minimal, glassy UI</div>
                   </div>
-                  <div className="muted tiny">Fast, minimal, glassy UI</div>
                 </div>
-              </div>
-              {isAuthed ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <nav className="nav chip-row">
                     <a className="chip" href="/dashboard">Dashboard</a>
@@ -38,13 +38,11 @@ export default async function RootLayout({ children }) {
                   </nav>
                   <SessionIndicator />
                 </div>
-              ) : (
-                <a className="chip" href="/login">Login</a>
-              )}
-            </div>
-          </header>
-          <main className="main-content">
-            <div className="shell">{children}</div>
+              </div>
+            </header>
+          )}
+          <main className={`main-content ${isAuthed ? "" : "auth-only"}`}>
+            <div className="shell auth-shell">{children}</div>
           </main>
           {isAuthed && (
             <footer className="footer glass">

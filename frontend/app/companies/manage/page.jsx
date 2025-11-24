@@ -4,7 +4,7 @@ import AuthWall from "../../../components/AuthWall";
 
 export default function ManageCompaniesPage() {
   return (
-    <AuthWall title="Company management is protected" description="Sign in as a founder or admin to view company settings.">
+    <AuthWall title="Company management is protected" description="Sign in with admin permissions to view company settings.">
       <section className="stack" style={{ gap: "0.75rem" }}>
         <div className="badge-list">
           <span className="pill">Companies</span>

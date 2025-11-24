@@ -15,7 +15,7 @@ export default function CreateCompanyPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!tokens) {
-      setState({ status: "error", message: "Login as a founder first" });
+      setState({ status: "error", message: "Login with company-owner permissions first" });
       return;
     }
 
@@ -40,16 +40,16 @@ export default function CreateCompanyPage() {
   };
 
   return (
-    <AuthWall title="Company creation is protected" description="Only founders can create companies. Please log in first.">
+    <AuthWall title="Company creation is protected" description="Only owner-level users can create companies. Please log in first.">
       <section className="grid" style={{ gap: "1.25rem" }}>
         <div className="stack">
           <div className="badge-list">
             <span className="pill">Companies</span>
-            <span className="pill pill-outline">Founders</span>
+            <span className="pill pill-outline">Owner role</span>
           </div>
           <h1 style={{ margin: 0 }}>Create company</h1>
           <p className="muted" style={{ margin: 0 }}>
-            POST to <code>{createUrl}</code> with your bearer token. Only founders can create companies.
+            POST to <code>{createUrl}</code> with your bearer token. Only owner-level accounts can create companies.
           </p>
         </div>
 
@@ -92,7 +92,7 @@ export default function CreateCompanyPage() {
               </pre>
             </div>
           )}
-          {!tokens && <div className="status-info">Sign in as a founder to create companies.</div>}
+          {!tokens && <div className="status-info">Sign in with company-owner permissions to create companies.</div>}
         </div>
       </section>
     </AuthWall>
