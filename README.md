@@ -29,15 +29,15 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
    - Check Nginx proxy health: `curl http://localhost/healthz`
    - The homepage shows API reachability using `NEXT_PUBLIC_API_URL`; if it reports unreachable, confirm your `.env` values and rebuild or restart.
 
-## Bootstrap a private owner login (one-time)
-- The users API requires an authenticated manager/owner to create additional accounts. Use the built-in bootstrap script to seed the first owner account without writing inline Python:
+## Bootstrap a private admin login (one-time)
+- The users API requires an authenticated admin to create additional accounts. Use the built-in bootstrap script to seed the first admin account without writing inline Python:
 
   ```bash
   docker compose exec backend python scripts/bootstrap_founder.py \
     --company "Jarvis Fuel" \
     --domain jarvis-fuel.com \
-    --email owner@app.jarvis-fuel.com \
-    --username owner \
+    --email admin@app.jarvis-fuel.com \
+    --username admin \
     --password "CHANGE_ME_STRONG"
   ```
 
