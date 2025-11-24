@@ -102,9 +102,9 @@ npm run dev
 
 ## Production domain notes (app.jarvis-fuel.com / jarvis-fuel.com)
 - Point both `app.jarvis-fuel.com` and `jarvis-fuel.com` DNS A records at the host IP `129.212.191.100`.
-- The Nginx config listens on port 80 for `app.jarvis-fuel.com` and issues a 301 redirect from `jarvis-fuel.com` to the app subdomain.
+- The Nginx config now terminates TLS on port 443 for both hosts and redirects HTTP 80 to HTTPS. Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (Cloudflare Origin Certs work here). A missing cert will surface Cloudflare **521** errors because the origin won’t accept HTTPS.
 - When running on the host, keep `NEXT_PUBLIC_API_URL=/api` so browser requests use the same origin; Nginx proxies `/api` to the backend container.
-- After updating DNS, deploy with `docker compose up --build -d` and verify the proxy at `http://app.jarvis-fuel.com/healthz` and the API at `http://app.jarvis-fuel.com/api/health`.
+- After updating DNS and adding certificates, deploy with `docker compose up --build -d` and verify the proxy at `https://app.jarvis-fuel.com/healthz` and the API at `https://app.jarvis-fuel.com/api/health`.
 
 ## End-to-end deployment on Ubuntu 22 (DigitalOcean + Cloudflare)
 Use these exact commands on a fresh Ubuntu 22 server (IP `129.212.191.100`) to bring the site up at `https://app.jarvis-fuel.com`:
@@ -136,16 +136,21 @@ cp .env.example .env
 - Keep `NEXT_PUBLIC_API_URL=/api` and `NEXT_BACKEND_URL=http://backend:8001` so the frontend proxies through Nginx to the backend container.
 - Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults.
 
-4) Ensure Cloudflare DNS points `app.jarvis-fuel.com` and `jarvis-fuel.com` A records at `129.212.191.100`. If using Cloudflare proxy, enable Websockets and keep HTTP 80 open (TLS termination can stay at Cloudflare or be added to Nginx separately).
+4) Provide TLS certs for the origin so Cloudflare can connect on port 443 (prevents 521 errors):
+   - Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (for Cloudflare Origin Certs, download the PEM + key and save them here).
+   - Keep Cloudflare in **Full (Strict)** or **Full** mode so it reaches the origin over HTTPS.
+   - Port 80 is kept open only to redirect to HTTPS and to serve `/healthz`.
 
-5) Build and start the stack (runs Nginx, backend, frontend, Postgres):
+5) Ensure Cloudflare DNS points `app.jarvis-fuel.com` and `jarvis-fuel.com` A records at `129.212.191.100`. If using Cloudflare proxy, enable Websockets.
+
+6) Build and start the stack (runs Nginx, backend, frontend, Postgres):
 
 ```bash
 cd /opt/phill
 sudo docker compose up --build -d
 ```
 
-6) Wait for health checks to report `healthy`:
+7) Wait for health checks to report `healthy`:
 
 ```bash
 sudo docker compose ps
@@ -153,7 +158,7 @@ sudo docker inspect --format='{{json .State.Health.Status}}' phill-backend
 sudo docker inspect --format='{{json .State.Health.Status}}' phill-frontend
 ```
 
-7) Verify routing through Nginx:
+8) Verify routing through Nginx (HTTPS):
 
 ```bash
    curl -I http://app.jarvis-fuel.com/healthz
@@ -171,7 +176,7 @@ If you see large sections disappear after clicking **Accept incoming change**, i
 
 If you see `200 OK` on both, the site should load at https://app.jarvis-fuel.com.
 
-8) Common fixes if the site does not load:
+9) Common fixes if the site does not load:
 - Rebuild after changing `.env`: `sudo docker compose build frontend backend && sudo docker compose up -d`
 - Check logs: `sudo docker compose logs -f nginx backend frontend`
 - Verify Cloudflare proxy headers reach Nginx: `curl -I http://app.jarvis-fuel.com/healthz` should show `Server: nginx`.
