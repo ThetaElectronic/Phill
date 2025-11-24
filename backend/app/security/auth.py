@@ -1,14 +1,26 @@
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from datetime import datetime
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from app.db import get_session
 from app.security.password import verify_password
 from app.security.tokens import TokenType, create_access_token, create_refresh_token, decode_token
-from app.users.models import User
+from app.users.models import AccessRequest, PasswordResetRequest, User
 
 router = APIRouter()
+
+
+class PasswordResetRequestPayload(BaseModel):
+    email: EmailStr
+
+
+class AccessRequestPayload(BaseModel):
+    email: EmailStr
+    note: str | None = None
 
 
 @router.post("/token")
@@ -51,3 +63,38 @@ def refresh_access_token(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     return {"access_token": create_access_token(user.id), "token_type": "bearer"}
+
+
+@router.post("/request-reset", status_code=status.HTTP_202_ACCEPTED)
+def request_password_reset(
+    payload: PasswordResetRequestPayload,
+    request: Request,
+    session: Session = Depends(get_session),
+) -> dict[str, str]:
+    record = PasswordResetRequest(
+        email=payload.email,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        created_at=datetime.utcnow(),
+    )
+    session.add(record)
+    session.commit()
+    return {"status": "accepted"}
+
+
+@router.post("/request-access", status_code=status.HTTP_202_ACCEPTED)
+def request_access(
+    payload: AccessRequestPayload,
+    request: Request,
+    session: Session = Depends(get_session),
+) -> dict[str, str]:
+    record = AccessRequest(
+        email=payload.email,
+        note=payload.note,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        created_at=datetime.utcnow(),
+    )
+    session.add(record)
+    session.commit()
+    return {"status": "accepted"}

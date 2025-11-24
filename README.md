@@ -46,6 +46,11 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - After running the script, sign in at `/login` with the credentials you provided. Protected routes stay hidden until authentication succeeds.
 - Rotate the password immediately after testing and store it in a secret manager.
 
+### Self-service auth requests (login page)
+- The login page now sends **password reset** and **access requests** to the backend via `/api/auth/request-reset` and `/api/auth/request-access`.
+- Requests are stored server-side (email, IP, user-agent) for follow-up; responses always return `202 Accepted` without revealing whether an account exists.
+- Keep SMTP configured if you want to hook reset emails into your mail provider later; today the requests are recorded only.
+
 ## Protected pages are fully hidden until login
 - Unauthenticated visitors are redirected to `/login` and do not see navigation, footer links, or content previews.
 - Once signed in, the full app shell and pages (dashboard, incidents, documents, AI, admin) become available based on role.

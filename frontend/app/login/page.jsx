@@ -12,17 +12,50 @@ function InlineActions({ onReset }) {
   const [email, setEmail] = useState("");
   const [requestEmail, setRequestEmail] = useState("");
   const [message, setMessage] = useState(null);
+  const [status, setStatus] = useState({ state: "idle" });
+
+  const handleAction = async (path, payload, successMessage) => {
+    setStatus({ state: "loading" });
+    setMessage(null);
+    try {
+      const res = await fetch(apiUrl(path), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        let detail = "Unable to submit";
+        try {
+          const body = await res.json();
+          if (body?.detail) detail = Array.isArray(body.detail) ? body.detail[0]?.msg || detail : body.detail;
+        } catch (error) {
+          try {
+            const text = await res.text();
+            if (text) detail = `${detail}: ${text.slice(0, 200)}`;
+          } catch {}
+        }
+        setStatus({ state: "error", message: detail });
+        return;
+      }
+
+      setStatus({ state: "success" });
+      setMessage(successMessage);
+      onReset?.();
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unexpected error";
+      setStatus({ state: "error", message: detail });
+    }
+  };
 
   const handleForgot = (event) => {
     event.preventDefault();
-    setMessage("If this email exists, a reset link will be sent.");
-    onReset?.();
+    handleAction("/auth/request-reset", { email }, "If this email exists, a reset link will be sent.");
   };
 
   const handleRequest = (event) => {
     event.preventDefault();
-    setMessage("We received your access request.");
-    onReset?.();
+    handleAction("/auth/request-access", { email: requestEmail }, "We received your access request.");
   };
 
   return (
@@ -69,6 +102,7 @@ function InlineActions({ onReset }) {
         </form>
       </div>
       {message && <div className="status-info">{message}</div>}
+      {status.state === "error" && <div className="status-error">{status.message}</div>}
     </div>
   );
 }

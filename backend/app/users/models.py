@@ -16,3 +16,24 @@ class User(SQLModel, table=True):
     password_hash: str
     disabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
+
+
+class PasswordResetRequest(SQLModel, table=True):
+    __tablename__ = "password_reset_requests"
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    email: str = Field(index=True)
+    ip_address: str | None = Field(default=None)
+    user_agent: str | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
+
+
+class AccessRequest(SQLModel, table=True):
+    __tablename__ = "access_requests"
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    email: str = Field(index=True)
+    note: str | None = Field(default=None)
+    ip_address: str | None = Field(default=None)
+    user_agent: str | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
