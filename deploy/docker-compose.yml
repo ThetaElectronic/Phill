@@ -1,0 +1,77 @@
+services:
+  backend:
+    build:
+      context: ${COMPOSE_FILE_DIR:-.}/../backend
+    container_name: phill-backend
+    restart: unless-stopped
+    env_file:
+      - ${COMPOSE_FILE_DIR:-.}/../.env
+    environment:
+      - ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ${COMPOSE_FILE_DIR:-.}/../frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+        NEXT_BACKEND_URL: ${NEXT_BACKEND_URL:-http://backend:8001}
+    container_name: phill-frontend
+    restart: unless-stopped
+    env_file:
+      - ${COMPOSE_FILE_DIR:-.}/../.env
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
+      - NEXT_BACKEND_URL=${NEXT_BACKEND_URL:-http://backend:8001}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:16
+    container_name: phill-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: phill
+      POSTGRES_PASSWORD: phillpassword
+      POSTGRES_DB: phill
+    volumes:
+      - phill_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phill"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx
+    container_name: phill-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/ssl
+
+volumes:
+  phill_db:
