@@ -17,6 +17,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
    ```
    - Leave `NEXT_BACKEND_URL` as `http://backend:8001` when running inside Docker so the frontend proxies to the backend container. Override it to `http://localhost:8001` only when running the frontend outside Docker.
    - For the live domain, set `API_HOST` and `FRONTEND_URL` to `https://app.jarvis-fuel.com`, add both `https://app.jarvis-fuel.com` and `https://jarvis-fuel.com` to `CORS_ORIGINS`, and keep `NEXT_PUBLIC_API_URL` set to `/api` so browser calls are proxied through Nginx.
+   - If you bypass Nginx (for example by opening the frontend directly on port 3000), set `NEXT_PUBLIC_API_URL=https://app.jarvis-fuel.com/api` (or your backend URL) before rebuilding the frontend so token requests hit the real API instead of returning HTML.
 2. From the repository root, build and start the stack (the frontend image bakes `NEXT_PUBLIC_API_URL` and `NEXT_BACKEND_URL` during build; update your `.env` before running). Compose resolves build contexts and `.env` via `${COMPOSE_FILE_DIR}`, so running in `/opt/phill` ensures contexts are `./backend` and `./frontend` instead of `/opt/backend`:
    ```bash
    docker compose up --build

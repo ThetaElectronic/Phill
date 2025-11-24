@@ -39,7 +39,12 @@ export default function LoginPage() {
           const payload = await res.json();
           if (payload?.detail) message = Array.isArray(payload.detail) ? payload.detail[0]?.msg || message : payload.detail;
         } catch (error) {
-          if (error instanceof Error) message = `${message}: ${error.message}`;
+          try {
+            const text = await res.text();
+            if (text) message = `${message}: ${text.slice(0, 240)}`;
+          } catch (readError) {
+            if (error instanceof Error) message = `${message}: ${error.message}`;
+          }
         }
         setStatus({ state: "error", message });
         return;
