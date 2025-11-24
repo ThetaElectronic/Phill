@@ -8,7 +8,7 @@ import { apiUrl } from "../../lib/api";
 
 const initialForm = { email: "", password: "" };
 
-function ForgotRequestPanels({ onReset }) {
+function InlineActions({ onReset }) {
   const [email, setEmail] = useState("");
   const [requestEmail, setRequestEmail] = useState("");
   const [message, setMessage] = useState(null);
@@ -26,53 +26,49 @@ function ForgotRequestPanels({ onReset }) {
   };
 
   return (
-    <div className="grid two-col" style={{ gap: "1rem" }}>
-      <form className="card surface stack" onSubmit={handleForgot} style={{ gap: "0.75rem" }}>
-        <div className="stack" style={{ gap: "0.35rem" }}>
-          <h3 style={{ margin: 0 }}>Forgot password</h3>
-          <p className="muted tiny" style={{ margin: 0 }}>
-            Enter your email to receive a reset link.
-          </p>
-        </div>
-        <label className="stack" style={{ gap: "0.35rem" }}>
-          Email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
-            autoComplete="email"
-          />
-        </label>
-        <button type="submit" className="ghost">
-          Send reset
-        </button>
-      </form>
+    <div className="card glass minimal-actions">
+      <div className="stack" style={{ gap: "0.5rem" }}>
+        <h3 style={{ margin: 0 }}>Need help?</h3>
+        <p className="muted tiny" style={{ margin: 0 }}>
+          Forgot your password or need an invite? Use the quick actions below. Everything else stays hidden until you sign in.
+        </p>
+      </div>
+      <div className="grid two-col" style={{ gap: "0.75rem" }}>
+        <form className="stack" onSubmit={handleForgot} style={{ gap: "0.35rem" }}>
+          <label className="stack" style={{ gap: "0.25rem" }}>
+            Reset link
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
+          </label>
+          <button type="submit" className="ghost">
+            Send reset
+          </button>
+        </form>
 
-      <form className="card surface stack" onSubmit={handleRequest} style={{ gap: "0.75rem" }}>
-        <div className="stack" style={{ gap: "0.35rem" }}>
-          <h3 style={{ margin: 0 }}>Request access</h3>
-          <p className="muted tiny" style={{ margin: 0 }}>
-            Ask an admin to invite you. We will notify them with your email.
-          </p>
-        </div>
-        <label className="stack" style={{ gap: "0.35rem" }}>
-          Work email
-          <input
-            type="email"
-            required
-            value={requestEmail}
-            onChange={(event) => setRequestEmail(event.target.value)}
-            placeholder="you@example.com"
-            autoComplete="email"
-          />
-        </label>
-        <button type="submit" className="ghost">
-          Send request
-        </button>
-      </form>
-      {message && <div className="status-info" style={{ gridColumn: "1 / -1" }}>{message}</div>}
+        <form className="stack" onSubmit={handleRequest} style={{ gap: "0.35rem" }}>
+          <label className="stack" style={{ gap: "0.25rem" }}>
+            Request access
+            <input
+              type="email"
+              required
+              value={requestEmail}
+              onChange={(event) => setRequestEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
+          </label>
+          <button type="submit" className="ghost">
+            Send request
+          </button>
+        </form>
+      </div>
+      {message && <div className="status-info">{message}</div>}
     </div>
   );
 }
@@ -167,7 +163,7 @@ function LoginForm() {
         {status.state === "error" && <div className="status-error">{status.message || "Unable to sign in"}</div>}
         {status.state === "success" && <div className="status-success">Redirecting…</div>}
       </div>
-      <ForgotRequestPanels onReset={() => clearTokens()} />
+      <InlineActions onReset={() => clearTokens()} />
     </div>
   );
 }

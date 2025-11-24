@@ -2,22 +2,23 @@
 
 :root {
   color-scheme: light;
-  --bg: #f7f8fb;
-  --card: #ffffff;
+  --bg: #f6f7fb;
+  --card: rgba(255, 255, 255, 0.82);
   --text: #0f172a;
-  --muted: #475569;
-  --border: #e2e8f0;
+  --muted: #4b5563;
+  --border: #e5e7eb;
   --accent: #2563eb;
-  --accent-soft: #dbeafe;
+  --accent-soft: #e7eefc;
   --success: #16a34a;
   --warning: #f59e0b;
   --danger: #dc2626;
   --purple: #7c3aed;
-  --teal: #14b8a6;
+  --teal: #0ea5e9;
   --night: #0f172a;
-  --aurora-1: rgba(46, 143, 255, 0.14);
-  --aurora-2: rgba(124, 58, 237, 0.18);
-  --aurora-3: rgba(14, 165, 233, 0.16);
+  --glass: rgba(255, 255, 255, 0.35);
+  --aurora-1: rgba(46, 143, 255, 0.12);
+  --aurora-2: rgba(124, 58, 237, 0.14);
+  --aurora-3: rgba(14, 165, 233, 0.14);
 }
 
 * {
@@ -27,10 +28,7 @@
 body {
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   margin: 0;
-  background: radial-gradient(circle at 18% 24%, rgba(59, 130, 246, 0.18) 0%, transparent 35%),
-    radial-gradient(circle at 84% 18%, rgba(236, 72, 153, 0.18) 0%, transparent 34%),
-    radial-gradient(circle at 72% 68%, rgba(34, 197, 94, 0.12) 0%, transparent 30%),
-    linear-gradient(135deg, #eef2ff 0%, #f8fafc 40%, #e0f2fe 100%);
+  background: linear-gradient(140deg, #f7f9fc 0%, #f0f4ff 45%, #f7f9fc 100%);
   color: var(--text);
 }
 
@@ -57,18 +55,24 @@ body {
   backdrop-filter: blur(20px);
 }
 
+.minimal-actions {
+  padding: 1.2rem 1.4rem;
+  backdrop-filter: blur(14px);
+  background: var(--glass);
+}
+
 .gradient-shell {
-  background: radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.14) 0, transparent 30%),
-    radial-gradient(circle at 85% 10%, rgba(14, 165, 233, 0.14) 0, transparent 30%),
-    radial-gradient(circle at 50% 90%, rgba(74, 222, 128, 0.08) 0, transparent 35%),
+  background: radial-gradient(circle at 18% 18%, rgba(37, 99, 235, 0.12) 0, transparent 32%),
+    radial-gradient(circle at 78% 12%, rgba(14, 165, 233, 0.12) 0, transparent 28%),
+    radial-gradient(circle at 52% 86%, rgba(124, 58, 237, 0.06) 0, transparent 32%),
     #f8fafc;
 }
 
 .bg-grid {
   min-height: 100vh;
   position: relative;
-  background-image: linear-gradient(#f1f5f9 1px, transparent 1px), linear-gradient(90deg, #f1f5f9 1px, transparent 1px);
-  background-size: 48px 48px;
+  background-image: linear-gradient(#eff3f8 1px, transparent 1px), linear-gradient(90deg, #eff3f8 1px, transparent 1px);
+  background-size: 56px 56px;
   background-position: center;
   overflow: hidden;
 }
@@ -80,8 +84,8 @@ body {
   background: radial-gradient(circle at 20% 30%, var(--aurora-1) 0, transparent 40%),
     radial-gradient(circle at 78% 22%, var(--aurora-2) 0, transparent 38%),
     radial-gradient(circle at 55% 80%, var(--aurora-3) 0, transparent 35%);
-  filter: blur(60px);
-  opacity: 0.9;
+  filter: blur(70px);
+  opacity: 0.65;
   pointer-events: none;
 }
 
