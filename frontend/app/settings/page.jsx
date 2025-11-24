@@ -1,10 +1,10 @@
-"use client";
-
 import AuthWall from "../../components/AuthWall";
+import { getSessionOrRedirect } from "../../lib/session";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const session = await getSessionOrRedirect("/settings");
   return (
-    <AuthWall title="Settings are protected" description="Sign in to adjust your profile and company preferences.">
+    <AuthWall session={session} title="Settings are protected" description="Sign in to adjust your profile and company preferences.">
       <section className="stack" style={{ gap: "0.75rem" }}>
         <div className="badge-list">
           <span className="pill">Settings</span>

@@ -159,3 +159,8 @@ Then visit http://localhost:8001/docs for the interactive API docs.
 
 ## Current state of the UI
 The frontend currently contains page stubs for login, dashboard, incidents, documents, companies, AI chat, settings, and admin areas. The visuals are minimal placeholders until components and styling are implemented.
+
+## Server-side auth redirects
+- Protected pages now redirect unauthenticated visitors to `/login?next=<path>` using cookies set during login.
+- The login form stores access + refresh tokens in cookies/localStorage; keep `NEXT_PUBLIC_API_URL` aligned so the token call hits the backend.
+- After running `bootstrap_founder.py`, sign in via `/login`, then revisit protected URLs (dashboard, incidents, tickets, documents, AI) to confirm redirects clear and data loads.

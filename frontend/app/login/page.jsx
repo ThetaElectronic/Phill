@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { clearTokens, loadTokens, storeTokens } from "../../lib/auth";
 import { apiUrl, getApiBase } from "../../lib/api";
 
 const initialForm = { username: "", password: "" };
 
-export default function LoginPage() {
+function LoginForm() {
   const apiBase = getApiBase();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams?.get("next") || "/dashboard";
   const tokenUrl = useMemo(() => apiUrl("/auth/token"), []);
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState({ state: "idle" });
@@ -53,7 +57,8 @@ export default function LoginPage() {
       const data = await res.json();
       setTokens(data);
       storeTokens(data);
-      setStatus({ state: "success", message: "Tokens received. Include the bearer token on API calls." });
+      setStatus({ state: "success", message: "Tokens received. Redirecting…" });
+      router.push(nextPath || "/dashboard");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected error";
       setStatus({ state: "error", message });
@@ -85,8 +90,8 @@ export default function LoginPage() {
           </div>
           <h1 style={{ margin: 0 }}>Sign in to Phill</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Use your company username and password. Token refresh and role-based access control are live on the
-            backend; this form calls the real token endpoint configured by <code>NEXT_PUBLIC_API_URL</code>.
+            Use your company username and password. Token refresh and role-based access control are live on the backend;
+            this form calls the real token endpoint configured by <code>NEXT_PUBLIC_API_URL</code>.
           </p>
           <div className="floating-badges">
             <span className="pill">/auth/token</span>
@@ -101,9 +106,9 @@ export default function LoginPage() {
           <div className="stack">
             <h2 style={{ margin: 0 }}>Credentials</h2>
             <span className="muted tiny">
-              Tokens are requested from <code>{tokenUrl}</code> using the OAuth2 password grant expected by the
-              backend.
+              Tokens are requested from <code>{tokenUrl}</code> using the OAuth2 password grant expected by the backend.
             </span>
+            <span className="muted tiny">Next redirect: <code>{nextPath}</code></span>
           </div>
           <form className="grid" style={{ gap: "0.75rem" }} onSubmit={handleSubmit}>
             <label>
@@ -142,8 +147,7 @@ export default function LoginPage() {
               <div className="stack" style={{ gap: "0.25rem" }}>
                 <strong>Tokens stored locally</strong>
                 <span className="tiny muted">
-                  Use the access token as <code>Authorization: Bearer {'<token>'}</code>. Refresh tokens are returned
-                  for manual testing.
+                  Access and refresh tokens are saved to cookies/localStorage for API calls and server-side redirects.
                 </span>
               </div>
               <pre className="code-block tiny" style={{ whiteSpace: "pre-wrap" }}>
@@ -175,7 +179,7 @@ export default function LoginPage() {
           <div className="timeline">
             <div className="timeline-item">
               <strong>Tokens cached</strong>
-              <div className="tiny muted">Stored in localStorage via the shared auth helper for reuse across pages.</div>
+              <div className="tiny muted">Stored in localStorage + cookies via the shared auth helper for reuse across pages.</div>
             </div>
             <div className="timeline-item">
               <strong>Bearer headers</strong>
@@ -185,6 +189,10 @@ export default function LoginPage() {
               <strong>Role filters</strong>
               <div className="tiny muted">Supervisors and above unlock creation/review paths; founders can manage companies.</div>
             </div>
+            <div className="timeline-item">
+              <strong>Refresh-ready</strong>
+              <div className="tiny muted">Refresh tokens are stored so the UI can auto-renew access tokens before expiry.</div>
+            </div>
           </div>
           <div className="sparkle">
             <dot />
@@ -193,5 +201,13 @@ export default function LoginPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="status-info">Loading login…</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
