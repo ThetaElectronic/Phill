@@ -4,7 +4,6 @@ services:
   backend:
     build: ./backend
     container_name: phill-backend
-    restart: unless-stopped
     env_file:
       - ./.env
     environment:
@@ -13,60 +12,33 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     ports:
       - "8001:8001"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health').status==200 else 1)"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
     depends_on:
       - db
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
-        NEXT_BACKEND_URL: ${NEXT_BACKEND_URL:-http://backend:8001}
+    build: ./frontend
     container_name: phill-frontend
-    restart: unless-stopped
     env_file:
       - ./.env
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
-      - NEXT_BACKEND_URL=${NEXT_BACKEND_URL:-http://backend:8001}
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    depends_on:
-      - backend
+      - NEXT_PUBLIC_API_URL=http://backend:8001
 
   db:
     image: postgres:16
     container_name: phill-db
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_USER: phill
       POSTGRES_PASSWORD: phillpassword
       POSTGRES_DB: phill
     volumes:
       - phill_db:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U phill"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
 
   nginx:
     image: nginx
     container_name: phill-nginx
-    restart: unless-stopped
-    depends_on:
-      - backend
-      - frontend
     ports:
       - "80:80"
       - "443:443"
