@@ -44,3 +44,9 @@ app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
 @app.get("/health", tags=["health"])
 def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/health", tags=["health"])
+def api_health_check() -> dict[str, str]:
+    """Health endpoint that aligns with the `/api` proxy path."""
+    return {"status": "ok"}
