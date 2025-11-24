@@ -33,7 +33,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - The users API requires an authenticated admin to create additional accounts. Use the built-in bootstrap script to seed the first admin account without writing inline Python:
 
   ```bash
-  docker compose exec backend python scripts/bootstrap_founder.py \
+  docker compose exec backend python scripts/bootstrap_admin.py \
     --company "Jarvis Fuel" \
     --domain jarvis-fuel.com \
     --email admin@app.jarvis-fuel.com \
@@ -163,4 +163,4 @@ The frontend currently contains page stubs for login, dashboard, incidents, docu
 ## Server-side auth redirects
 - Protected pages now redirect unauthenticated visitors to `/login?next=<path>` using cookies set during login.
 - The login form stores access + refresh tokens in cookies/localStorage; keep `NEXT_PUBLIC_API_URL` aligned so the token call hits the backend.
-- After running `bootstrap_founder.py`, sign in via `/login`, then revisit protected URLs (dashboard, incidents, tickets, documents, AI) to confirm redirects clear and data loads.
+- After running `bootstrap_admin.py`, sign in via `/login`, then revisit protected URLs (dashboard, incidents, tickets, documents, AI) to confirm redirects clear and data loads.
