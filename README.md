@@ -10,6 +10,8 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - Node.js 20+ (only needed for running the frontend without Docker)
 - Python 3.12 (only needed for running the backend without Docker)
 
+> A root `.nvmrc` pins Node 20. Run `nvm use` (or install Node 20.x manually) before local frontend commands. Older Node releases (e.g., 12/14) will surface `next: not found`, `Unsupported engine`, or `Unexpected token ?` errors because Next.js 15 targets Node 18.18+.
+
 ## Quick start (Docker)
 1. Copy the environment template to the repository root (it will be loaded by Docker Compose via `env_file`) and fill in secrets:
    ```bash
@@ -52,6 +54,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 ## Run frontend locally (without Docker)
 ```bash
 cd frontend
+nvm use  # honors .nvmrc (Node 20)
 npm install
 npm run dev
 ```
