@@ -14,6 +14,9 @@ class UserCreate(UserBase):
     company_id: str | None = Field(default=None, min_length=1)
     password: str = Field(..., min_length=8)
 
+    # Allow omitting a distinct username; the email will be used when not provided.
+    username: str | None = Field(default=None, min_length=3)
+
 
 class UserRead(UserBase):
     company_id: str

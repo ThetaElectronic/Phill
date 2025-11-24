@@ -17,7 +17,7 @@ def bootstrap_founder(
     company_name: str,
     company_domain: str,
     email: str,
-    username: str,
+    username: str | None,
     password: str,
     display_name: str | None = None,
 ) -> str:
@@ -40,8 +40,8 @@ def bootstrap_founder(
             id=str(uuid4()),
             company_id=company.id,
             email=email,
-            username=username,
-            name=display_name or username,
+            username=username or email,
+            name=display_name or username or email,
             role=ROLE_FOUNDER,
             password_hash=hash_password(password),
         )
@@ -55,7 +55,7 @@ def main() -> None:
     parser.add_argument("--company", required=True, help="Company name")
     parser.add_argument("--domain", required=True, help="Company domain")
     parser.add_argument("--email", required=True, help="Founder email")
-    parser.add_argument("--username", required=True, help="Founder username")
+    parser.add_argument("--username", help="Founder username (defaults to the email)")
     parser.add_argument("--password", required=True, help="Founder password")
     parser.add_argument("--name", help="Display name (defaults to username)")
 

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from app.db import get_session
@@ -14,7 +15,11 @@ router = APIRouter()
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)
 ) -> dict[str, str]:
-    user = session.exec(select(User).where(User.username == form_data.username)).first()
+    # Accept either email or username for authentication; emails are the primary login field.
+    identifier = form_data.username
+    user = session.exec(
+        select(User).where(or_(User.username == identifier, User.email == identifier))
+    ).first()
     if not user or not verify_password(form_data.password, user.password_hash) or user.disabled:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
 
