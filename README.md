@@ -102,7 +102,7 @@ npm run dev
 
 ## Production domain notes (app.jarvis-fuel.com / jarvis-fuel.com)
 - Point both `app.jarvis-fuel.com` and `jarvis-fuel.com` DNS A records at the host IP `129.212.191.100`.
-- The Nginx config now terminates TLS on port 443 for both hosts and redirects HTTP 80 to HTTPS. Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (Cloudflare Origin Certs work here). A missing cert will surface Cloudflare **521** errors because the origin won’t accept HTTPS.
+- The Nginx config now terminates TLS on port 443 for both hosts and redirects HTTP 80 to HTTPS. Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (Cloudflare Origin Certs work here); only install your real certs on the server and avoid committing them to Git. A missing cert will surface Cloudflare **521** errors because the origin won’t accept HTTPS.
 - When running on the host, keep `NEXT_PUBLIC_API_URL=/api` so browser requests use the same origin; Nginx proxies `/api` to the backend container.
 - After updating DNS and adding certificates, deploy with `docker compose up --build -d` and verify the proxy at `https://app.jarvis-fuel.com/healthz` and the API at `https://app.jarvis-fuel.com/api/health`.
 
@@ -137,7 +137,7 @@ cp .env.example .env
 - Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults.
 
 4) Provide TLS certs for the origin so Cloudflare can connect on port 443 (prevents 521 errors):
-   - A placeholder Cloudflare Origin certificate is committed at `deploy/ssl/fullchain.pem` with its key at `deploy/ssl/privkey.pem` so Nginx will boot even before you install your own certs. Replace both files with your actual certificate and private key before going live.
+   - A placeholder Cloudflare Origin certificate is committed at `deploy/ssl/fullchain.pem` with its key at `deploy/ssl/privkey.pem` so Nginx will boot even before you install your own certs. Replace both files with your actual certificate and private key **on the server** before going live, and keep real certificates out of version control.
    - Keep Cloudflare in **Full (Strict)** or **Full** mode so it reaches the origin over HTTPS.
    - Port 80 is kept open only to redirect to HTTPS and to serve `/healthz`.
 
