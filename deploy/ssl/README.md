@@ -2,6 +2,8 @@
 
 Place your origin certificate and key at `fullchain.pem` and `privkey.pem` before bringing the stack online. The `.gitignore` rule prevents any `.pem` files from being committed.
 
+If those files are missing when the Nginx container starts, it auto-generates a temporary self-signed pair so the proxy can boot (CN defaults to `app.jarvis-fuel.com`, overridable with `TLS_DOMAIN`). Replace the generated files with your real certificate and key immediately after issuance.
+
 Need a placeholder just to let Nginx boot? Generate a short-lived self-signed pair locally and keep it out of version control:
 
 - Easiest: `bash deploy/ssl/generate-self-signed.sh app.jarvis-fuel.com`

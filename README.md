@@ -102,7 +102,7 @@ npm run dev
 
 ## Production domain notes (app.jarvis-fuel.com / jarvis-fuel.com)
 - Point both `app.jarvis-fuel.com` and `jarvis-fuel.com` DNS A records at the host IP `129.212.191.100`.
-- The Nginx config now terminates TLS on port 443 for both hosts and redirects HTTP 80 to HTTPS. Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (Cloudflare Origin Certs work here); only install your real certs on the server and avoid committing them to Git. A missing cert will surface Cloudflare **521** errors because the origin won’t accept HTTPS. If you need a bootstrap cert just to bring up the stack, run `deploy/ssl/generate-self-signed.sh <domain>` (defaults to `app.jarvis-fuel.com`) or generate a self-signed placeholder manually and keep it out of Git.
+- The Nginx config now terminates TLS on port 443 for both hosts and redirects HTTP 80 to HTTPS. Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (Cloudflare Origin Certs work here); only install your real certs on the server and avoid committing them to Git. If those files are missing when the container starts, the Nginx entrypoint auto-generates a temporary self-signed certificate (CN defaults to `app.jarvis-fuel.com`, overridable with `TLS_DOMAIN`) so the proxy can boot; replace it with your real cert immediately. You can also create one manually with `deploy/ssl/generate-self-signed.sh <domain>` and keep it out of Git.
 - When running on the host, keep `NEXT_PUBLIC_API_URL=/api` so browser requests use the same origin; Nginx proxies `/api` to the backend container.
 - After updating DNS and adding certificates, deploy with `docker compose up --build -d` and verify the proxy at `https://app.jarvis-fuel.com/healthz` and the API at `https://app.jarvis-fuel.com/api/health`.
 
@@ -138,16 +138,17 @@ cp .env.example .env
 
 4) Provide TLS certs for the origin so Cloudflare can connect on port 443 (prevents 521 errors):
    - Place your real certificate and key on the server at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` before going live. The `/deploy/ssl` directory is ignored by Git so you don’t accidentally commit private keys.
-  - To let Nginx start before you have a real cert, generate a throwaway self-signed pair locally (do **not** commit it):
-    - Easiest: `bash deploy/ssl/generate-self-signed.sh app.jarvis-fuel.com`
-    - Manual OpenSSL equivalent:
-      ```bash
-      openssl req -x509 -nodes -days 365 \
-        -newkey rsa:2048 \
-        -keyout deploy/ssl/privkey.pem \
-        -out deploy/ssl/fullchain.pem \
-        -subj "/CN=app.jarvis-fuel.com"
-      ```
+   - If those files are missing when the Nginx container starts, it now auto-generates a temporary self-signed certificate so the proxy can boot. Override the CN with `TLS_DOMAIN=<your-domain>` (defaults to `app.jarvis-fuel.com`). Replace the generated files with your real cert immediately after issuance.
+   - You can also pre-generate a throwaway self-signed pair locally (do **not** commit it):
+     - Easiest: `bash deploy/ssl/generate-self-signed.sh app.jarvis-fuel.com`
+     - Manual OpenSSL equivalent:
+       ```bash
+       openssl req -x509 -nodes -days 365 \
+         -newkey rsa:2048 \
+         -keyout deploy/ssl/privkey.pem \
+         -out deploy/ssl/fullchain.pem \
+         -subj "/CN=app.jarvis-fuel.com"
+       ```
    - Keep Cloudflare in **Full (Strict)** or **Full** mode so it reaches the origin over HTTPS.
    - Port 80 is kept open only to redirect to HTTPS and to serve `/healthz`.
 
