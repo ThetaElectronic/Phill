@@ -56,6 +56,13 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   - JSON: `curl -X POST $NEXT_BACKEND_URL/api/auth/login -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"your_password"}'`
   - OAuth2 form (used by the frontend): `curl -X POST $NEXT_BACKEND_URL/api/auth/token -H 'Content-Type: application/x-www-form-urlencoded' -d 'username=you@example.com&password=your_password'`
 
+### Self-service profile and password
+- Signed-in users can visit `/account` to update their **name/username** or change their **password** without admin help.
+- API equivalents for scripted changes:
+  - Update profile: `curl -X PATCH $NEXT_BACKEND_URL/api/users/me -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"name":"New Name","username":"new-handle"}'`
+  - Change password: `curl -X POST $NEXT_BACKEND_URL/api/users/me/password -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"current_password":"old","new_password":"new-secret"}'`
+  - On password change, existing tokens stay valid until they expire; refresh from the UI or re-login to rotate them immediately.
+
 ### Create Nathaniel's admin account
 - To bootstrap `Nathaniel Wilson` with email-based login on the live stack, run this from the repo root (values provided by Nathaniel; update later if needed):
 
