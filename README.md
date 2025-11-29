@@ -43,7 +43,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
     --password "CHANGE_ME_STRONG"
   ```
 
-- The script is idempotent: if a user already exists for that email, it leaves the record intact and simply reports the email.
+- The script is idempotent: if a user already exists for that email, it leaves the record intact and simply reports the email. Add `--update` to reset the password/name if you need to rotate credentials for an existing record.
 - After running the script, sign in at `/login` with the credentials you provided. Protected routes stay hidden until authentication succeeds.
 - Rotate the password immediately after testing and store it in a secret manager.
 - `PASSWORD_RESET_EXPIRE_MINUTES` controls how long reset tokens stay valid (default 30 minutes).
@@ -103,10 +103,10 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
     BOOTSTRAP_EMAIL="nathanielwilson@guardianfueltech.com" \
     BOOTSTRAP_PASSWORD="Genesistheta2013!" \
     BOOTSTRAP_NAME="Nathaniel Wilson" \
-    python scripts/bootstrap_user.py --role admin
+    python scripts/bootstrap_user.py --role admin --update
   ```
 
-- The script is idempotent: if the user already exists, it leaves the record intact and simply reports the email. Sign in at `/login` with the email/password above and rotate the password immediately after confirming access.
+- The script is idempotent: if the user already exists, it leaves the record intact and simply reports the email. Add `--update` to reset the password/name if the account already exists with different credentials. Sign in at `/login` with the email/password above and rotate the password immediately after confirming access.
 
 ### Self-service auth requests (login page)
 - The login page now sends **password reset** and **access requests** to the backend via `/api/auth/request-reset` and `/api/auth/request-access`.
