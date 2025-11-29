@@ -4,8 +4,8 @@ from sqlmodel import Session, select
 from app.db import get_session
 from app.security.dependencies import get_current_active_user, require_role
 from app.users.models import User
-from app.users.schemas import PasswordChange, UserCreate, UserRead, UserUpdate
-from app.users.service import create_user, update_profile
+from app.users.schemas import PasswordChange, PasswordSet, UserCreate, UserRead, UserUpdate
+from app.users.service import create_user, set_password, update_profile
 from app.users.permissions import ROLE_MANAGER, ROLE_FOUNDER, has_role
 from app.security.password import hash_password, verify_password
 
@@ -44,6 +44,26 @@ def list_users(
 
     users = session.exec(query).all()
     return [UserRead.model_validate(user) for user in users]
+
+
+@router.post("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
+def set_user_password(
+    user_id: str,
+    payload: PasswordSet,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_role(ROLE_MANAGER)),
+) -> None:
+    target = session.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if not has_role(current_user.role, target.role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update a higher role")
+
+    if not has_role(current_user.role, ROLE_FOUNDER) and target.company_id != current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is outside your company")
+
+    set_password(target, payload, session)
 
 
 @router.patch("/me", response_model=UserRead)

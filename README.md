@@ -65,7 +65,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 
 ### Admin user management
 - Admins and founders can manage users from `/admin/users` (UI) or `/api/users` (API). Admins are constrained to their own company scope and cannot grant a higher role than their own.
-- The UI shows a simple list of existing users you are allowed to see and a form to add new accounts with name, email, password, and role.
+- The UI shows a simple list of existing users you are allowed to see and a form to add new accounts with name, email, password, and role. Each user row also includes a **password reset** control for setting a temporary password when someone is locked out.
 - To add a user via API (honors the same role checks):
 
   ```bash
@@ -73,6 +73,15 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
     -H "Authorization: Bearer <token>" \
     -H "Content-Type: application/json" \
     -d '{"name":"Teammate","email":"person@example.com","password":"TempP@ssw0rd!","role":"user"}'
+  ```
+
+- To set a user's password as an admin (must be in your company unless you are a founder, and you cannot reset someone with a higher role than yours):
+
+  ```bash
+  curl -X POST $NEXT_BACKEND_URL/api/users/<user_id>/password \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{"password":"NewTempP@ssw0rd!"}'
   ```
 
 ### Create Nathaniel's admin account

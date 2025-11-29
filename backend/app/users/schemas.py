@@ -36,3 +36,7 @@ class UserUpdate(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str = Field(..., min_length=8)
     new_password: str = Field(..., min_length=8)
+
+
+class PasswordSet(BaseModel):
+    password: str = Field(..., min_length=8)

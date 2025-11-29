@@ -15,6 +15,8 @@ const ROLE_OPTIONS = [
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
   const [status, setStatus] = useState({ state: "idle", message: "" });
+  const [passwords, setPasswords] = useState({});
+  const [passwordStatus, setPasswordStatus] = useState({});
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -67,6 +69,14 @@ export default function AdminUsersPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handlePasswordInput = (userId, value) => {
+    setPasswords((prev) => ({ ...prev, [userId]: value }));
+  };
+
+  const updatePasswordStatus = (userId, next) => {
+    setPasswordStatus((prev) => ({ ...prev, [userId]: next }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!canSubmit) return;
@@ -101,6 +111,38 @@ export default function AdminUsersPage() {
       setStatus({
         state: "error",
         message: error instanceof Error ? error.message : "Failed to create user",
+      });
+    }
+  };
+
+  const handleSetPassword = async (userId) => {
+    const password = (passwords[userId] || "").trim();
+    if (!password) return;
+
+    updatePasswordStatus(userId, { state: "saving", message: "" });
+
+    try {
+      const res = await fetchWithAuth(`/api/users/${userId}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        updatePasswordStatus(userId, {
+          state: "error",
+          message: detail?.detail || `Unable to set password (${res.status})`,
+        });
+        return;
+      }
+
+      setPasswords((prev) => ({ ...prev, [userId]: "" }));
+      updatePasswordStatus(userId, { state: "success", message: "Password updated" });
+    } catch (error) {
+      updatePasswordStatus(userId, {
+        state: "error",
+        message: error instanceof Error ? error.message : "Failed to set password",
       });
     }
   };
@@ -204,6 +246,34 @@ export default function AdminUsersPage() {
                   <div className="stack" style={{ gap: "0.1rem" }}>
                     <strong>{user.name}</strong>
                     <span className="tiny muted">{user.username}</span>
+                  </div>
+                  <div className="stack" style={{ gap: "0.35rem" }}>
+                    <label className="stack" style={{ gap: "0.25rem" }}>
+                      Set password
+                      <input
+                        type="password"
+                        value={passwords[user.id] || ""}
+                        onChange={(event) => handlePasswordInput(user.id, event.target.value)}
+                        placeholder="Temporary password"
+                        autoComplete="new-password"
+                      />
+                    </label>
+                    <div className="badge-list" style={{ gap: "0.35rem", justifyContent: "space-between" }}>
+                      <button
+                        type="button"
+                        className="pill pill-outline"
+                        onClick={() => handleSetPassword(user.id)}
+                        disabled={!passwords[user.id]?.trim() || passwordStatus[user.id]?.state === "saving"}
+                      >
+                        {passwordStatus[user.id]?.state === "saving" ? "Saving…" : "Set password"}
+                      </button>
+                      {passwordStatus[user.id]?.state === "success" && (
+                        <span className="tiny status-success">{passwordStatus[user.id]?.message}</span>
+                      )}
+                      {passwordStatus[user.id]?.state === "error" && (
+                        <span className="tiny status-error">{passwordStatus[user.id]?.message}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

@@ -2,7 +2,7 @@ from sqlmodel import Session
 
 from app.security.password import hash_password
 from app.users.models import User
-from app.users.schemas import UserCreate, UserUpdate
+from app.users.schemas import PasswordSet, UserCreate, UserUpdate
 
 
 def create_user(payload: UserCreate, session: Session, company_id: str) -> User:
@@ -38,3 +38,11 @@ def update_profile(payload: UserUpdate, session: Session, current_user: User) ->
         session.refresh(current_user)
 
     return current_user
+
+
+def set_password(target: User, payload: PasswordSet, session: Session) -> User:
+    target.password_hash = hash_password(payload.password)
+    session.add(target)
+    session.commit()
+    session.refresh(target)
+    return target
