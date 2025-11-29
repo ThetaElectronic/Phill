@@ -11,15 +11,15 @@ from typing import Iterable
 
 
 DEFAULT_BASE = "http://localhost:8001"
-ENDPOINTS: tuple[str, ...] = ("/health", "/api/health")
+DEFAULT_ENDPOINTS: tuple[str, ...] = ("/health", "/api/health")
 
 
-def fetch(url: str, *, insecure: bool = False) -> tuple[int, str]:
+def fetch(url: str, *, insecure: bool = False, timeout: float = 5.0) -> tuple[int, str]:
     context = ssl._create_unverified_context() if insecure else None
     req = urllib.request.Request(url, headers={"User-Agent": "phill-health-check/1"})
     try:
         with urllib.request.urlopen(  # type: ignore[no-untyped-call]
-            req, timeout=5, context=context
+            req, timeout=timeout, context=context
         ) as resp:
             body = resp.read().decode("utf-8")
             return resp.status, body
@@ -29,11 +29,17 @@ def fetch(url: str, *, insecure: bool = False) -> tuple[int, str]:
         return 0, str(exc)
 
 
-def check_endpoints(base_url: str, endpoints: Iterable[str], *, insecure: bool) -> int:
+def check_endpoints(
+    base_url: str,
+    endpoints: Iterable[str],
+    *,
+    insecure: bool,
+    timeout: float,
+) -> int:
     failures = 0
     for path in endpoints:
         url = f"{base_url.rstrip('/')}{path}"
-        status, body = fetch(url, insecure=insecure)
+        status, body = fetch(url, insecure=insecure, timeout=timeout)
         ok = status == 200
         summary = body
         try:
@@ -60,13 +66,30 @@ def main() -> None:
         help="Base URL for the backend (default http://localhost:8001)",
     )
     parser.add_argument(
+        "--include-healthz",
+        action="store_true",
+        help="Also probe /healthz (useful when checking Nginx/proxy)",
+    )
+    parser.add_argument(
         "--insecure",
         action="store_true",
         help="Skip TLS verification (useful with self-signed certs)",
     )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=5.0,
+        help="Request timeout in seconds (default 5.0)",
+    )
     args = parser.parse_args()
 
-    failures = check_endpoints(args.base_url, ENDPOINTS, insecure=args.insecure)
+    endpoints: tuple[str, ...] = DEFAULT_ENDPOINTS
+    if args.include_healthz:
+        endpoints = (*DEFAULT_ENDPOINTS, "/healthz")
+
+    failures = check_endpoints(
+        args.base_url, endpoints, insecure=args.insecure, timeout=args.timeout
+    )
     if failures:
         sys.exit(1)
 
