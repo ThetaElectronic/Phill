@@ -13,6 +13,7 @@ export default function AiClient({ session }) {
   const [status, setStatus] = useState({ state: "idle" });
   const chatUrl = useMemo(() => apiUrl("/ai/chat"), []);
   const [useMemory, setUseMemory] = useState(false);
+  const [meta, setMeta] = useState(null);
 
   useEffect(() => {
     setStatus((prev) => (prev.state === "idle" ? prev : prev));
@@ -25,6 +26,7 @@ export default function AiClient({ session }) {
     }
     if (!input.trim()) return;
     setStatus({ state: "loading" });
+    setMeta(null);
     try {
       const res = await fetchWithAuth("/ai/chat", {
         method: "POST",
@@ -38,7 +40,14 @@ export default function AiClient({ session }) {
         return;
       }
       const data = await res.json();
-      setMessages((prev) => [...prev, { role: "user", content: input }, { role: "assistant", content: data?.reply }]);
+      const reply = typeof data?.reply === "string" ? data.reply : "";
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: input },
+        { role: "assistant", content: reply || "No reply received" },
+      ]);
+      setMeta({ model: data?.model, usage: data?.usage });
       setInput("");
       setStatus({ state: "success" });
     } catch (error) {
@@ -86,6 +95,13 @@ export default function AiClient({ session }) {
 
           {status.state === "error" && <div className="status-error">{status.message}</div>}
           {status.state === "success" && <div className="status-success">Message sent</div>}
+
+          {meta && (
+            <div className="tiny muted badge-list" style={{ gap: "0.35rem" }}>
+              {meta.model && <span className="pill pill-outline">{meta.model}</span>}
+              {meta.usage?.total_tokens && <span className="pill">{meta.usage.total_tokens} tokens</span>}
+            </div>
+          )}
 
           {messages.length > 0 && (
             <div className="stack" style={{ gap: "0.5rem" }}>
