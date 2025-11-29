@@ -73,6 +73,16 @@ def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_
     }
 
 
+@router.post("/login")
+def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_session)) -> dict[str, str]:
+    user = _authenticate(payload.email, payload.password, session)
+    return {
+        "access_token": create_access_token(user.id),
+        "refresh_token": create_refresh_token(user.id),
+        "token_type": "bearer",
+    }
+
+
 @router.post("/refresh")
 def refresh_access_token(
     refresh_token: str = Body(embed=True), session: Session = Depends(get_session)
