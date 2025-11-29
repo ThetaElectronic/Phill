@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { clearTokens, loadTokens, storeTokens } from "../../lib/auth";
@@ -23,13 +23,17 @@ async function readError(res, fallbackMessage) {
   return message;
 }
 
-function InlineActions({ onReset }) {
+function InlineActions({ onReset, defaultToken = "" }) {
   const [email, setEmail] = useState("");
   const [requestEmail, setRequestEmail] = useState("");
-  const [resetToken, setResetToken] = useState("");
+  const [resetToken, setResetToken] = useState(defaultToken);
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState(null);
   const [status, setStatus] = useState({ state: "idle" });
+
+  useEffect(() => {
+    if (defaultToken) setResetToken(defaultToken);
+  }, [defaultToken]);
 
   const handleAction = async (path, payload, successMessage) => {
     setStatus({ state: "loading" });
@@ -164,7 +168,7 @@ function InlineActions({ onReset }) {
   );
 }
 
-function LoginForm() {
+function LoginForm({ defaultResetToken = "" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams?.get("next") || "/dashboard";
@@ -263,7 +267,7 @@ function LoginForm() {
         {status.state === "error" && <div className="status-error">{status.message || "Unable to sign in"}</div>}
         {status.state === "success" && <div className="status-success">Redirecting…</div>}
       </div>
-      <InlineActions onReset={() => clearTokens()} />
+      <InlineActions onReset={() => clearTokens()} defaultToken={defaultResetToken} />
     </div>
   );
 }
@@ -271,10 +275,12 @@ function LoginForm() {
 export default function LoginPage() {
   const existingTokens = loadTokens();
   const [hasTokens] = useState(Boolean(existingTokens));
+  const searchParams = useSearchParams();
+  const resetFromUrl = searchParams?.get("reset") || "";
 
   return (
     <section className="grid" style={{ gap: "1.5rem" }}>
-      <LoginForm />
+      <LoginForm defaultResetToken={resetFromUrl} />
       {hasTokens && <div className="status-info">Stored session detected. Sign in again to refresh.</div>}
     </section>
   );

@@ -69,11 +69,12 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 ### Self-service auth requests (login page)
 - The login page now sends **password reset** and **access requests** to the backend via `/api/auth/request-reset` and `/api/auth/request-access`.
 - Requests are stored server-side (email, IP, user-agent) for follow-up; responses always return `202 Accepted` without revealing whether an account exists.
-- Keep SMTP configured if you want to hook reset emails into your mail provider later; today the requests are recorded only.
+- If SMTP is configured (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`), the backend emails reset tokens and acknowledges access requests automatically; otherwise the requests are still recorded.
+- Admins can verify mail delivery from the UI at `/admin/email` (or by POSTing to `/api/admin/email/test` with `{ "recipient": "you@example.com" }`).
 
 ### Completing a password reset
-- When you submit a reset request, the backend creates a short-lived token. In non-production environments, the raw token is returned in the API response for quick testing. In production, deliver the token via your mailer.
-- Use the login page’s **Confirm reset** form to paste the token and set a new password. Tokens expire after `PASSWORD_RESET_EXPIRE_MINUTES` and can only be used once.
+- When you submit a reset request, the backend creates a short-lived token. In non-production environments, the raw token is returned in the API response for quick testing. In production, the backend emails the token to the address on file and includes a link to `/login?reset=<token>` for convenience.
+- Use the login page’s **Confirm reset** form (or the prefilled reset link) to set a new password. Tokens expire after `PASSWORD_RESET_EXPIRE_MINUTES` and can only be used once.
 
 ## Protected pages are fully hidden until login
 - Unauthenticated visitors are redirected to `/login` and do not see navigation, footer links, or content previews.
