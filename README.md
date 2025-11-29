@@ -47,6 +47,11 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - After running the script, sign in at `/login` with the credentials you provided. Protected routes stay hidden until authentication succeeds.
 - Rotate the password immediately after testing and store it in a secret manager.
 - `PASSWORD_RESET_EXPIRE_MINUTES` controls how long reset tokens stay valid (default 30 minutes).
+- If you run the bootstrap command from a non-interactive shell (e.g., inside another script), add `-T` to `docker compose exec` to avoid the "input device is not a TTY" error:
+
+  ```bash
+  docker compose exec -T backend python scripts/bootstrap_admin.py --help
+  ```
 - API login options:
   - JSON: `curl -X POST $NEXT_BACKEND_URL/api/auth/login -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"your_password"}'`
   - OAuth2 form (used by the frontend): `curl -X POST $NEXT_BACKEND_URL/api/auth/token -H 'Content-Type: application/x-www-form-urlencoded' -d 'username=you@example.com&password=your_password'`
