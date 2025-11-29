@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
 import json
+import ssl
 import sys
 import urllib.error
 import urllib.request
@@ -12,10 +14,13 @@ DEFAULT_BASE = "http://localhost:8001"
 ENDPOINTS: tuple[str, ...] = ("/health", "/api/health")
 
 
-def fetch(url: str) -> tuple[int, str]:
+def fetch(url: str, *, insecure: bool = False) -> tuple[int, str]:
+    context = ssl._create_unverified_context() if insecure else None
     req = urllib.request.Request(url, headers={"User-Agent": "phill-health-check/1"})
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:  # type: ignore[no-untyped-call]
+        with urllib.request.urlopen(  # type: ignore[no-untyped-call]
+            req, timeout=5, context=context
+        ) as resp:
             body = resp.read().decode("utf-8")
             return resp.status, body
     except urllib.error.HTTPError as exc:  # type: ignore[attr-defined]
@@ -24,11 +29,11 @@ def fetch(url: str) -> tuple[int, str]:
         return 0, str(exc)
 
 
-def check_endpoints(base_url: str, endpoints: Iterable[str]) -> int:
+def check_endpoints(base_url: str, endpoints: Iterable[str], *, insecure: bool) -> int:
     failures = 0
     for path in endpoints:
         url = f"{base_url.rstrip('/')}{path}"
-        status, body = fetch(url)
+        status, body = fetch(url, insecure=insecure)
         ok = status == 200
         summary = body
         try:
@@ -54,9 +59,14 @@ def main() -> None:
         default=DEFAULT_BASE,
         help="Base URL for the backend (default http://localhost:8001)",
     )
+    parser.add_argument(
+        "--insecure",
+        action="store_true",
+        help="Skip TLS verification (useful with self-signed certs)",
+    )
     args = parser.parse_args()
 
-    failures = check_endpoints(args.base_url, ENDPOINTS)
+    failures = check_endpoints(args.base_url, ENDPOINTS, insecure=args.insecure)
     if failures:
         sys.exit(1)
 

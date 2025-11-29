@@ -4,7 +4,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 
 > If the site does not load, use the Nginx health endpoint at http://localhost/healthz to confirm the proxy is running, and hit
 > the API health endpoint at http://localhost/api/health to verify backend routing through the proxy.
-> A helper script is also available to check both backend endpoints at once: `docker compose exec backend python scripts/check_status.py`.
+> A helper script is also available to check both backend endpoints at once: `docker compose exec backend python scripts/check_status.py`. Add `--insecure` if you are testing against a self-signed certificate and want to skip TLS verification.
 
 ## Prerequisites
 - Docker and Docker Compose
@@ -31,7 +31,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
    - Verify containers: `docker compose ps`
    - Wait for health checks: backend/db/frontend declare health checks; `docker inspect --format='{{json .State.Health.Status}}' phill-backend` (or frontend/db) should report `healthy` before testing the site.
    - Check Nginx proxy health: `curl http://localhost/healthz`
-   - Check backend health endpoints together: `docker compose exec backend python scripts/check_status.py`
+   - Check backend health endpoints together: `docker compose exec backend python scripts/check_status.py` (append `--insecure` if you are temporarily using self-signed certs)
    - The homepage shows API reachability using `NEXT_PUBLIC_API_URL`; if it reports unreachable, confirm your `.env` values and rebuild or restart.
 
 ## Bootstrap a private admin login (one-time)

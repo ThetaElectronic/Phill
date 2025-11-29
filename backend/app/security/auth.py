@@ -87,19 +87,6 @@ async def login_for_access_token(
 
     user = _authenticate(identifier, secret, session)
 
-@router.post("/login")
-def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_session)) -> dict[str, str]:
-    user = _authenticate(payload.email, payload.password, session)
-    return {
-        "access_token": create_access_token(user.id),
-        "refresh_token": create_refresh_token(user.id),
-        "token_type": "bearer",
-    }
-
-
-@router.post("/login")
-def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_session)) -> dict[str, str]:
-    user = _authenticate(payload.email, payload.password, session)
     return {
         "access_token": create_access_token(user.id),
         "refresh_token": create_refresh_token(user.id),
