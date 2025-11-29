@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.admin.metrics import api_latency_bucket
 from app.ai.engine import ai_configuration
 from app.communication.email import smtp_configured
@@ -19,4 +21,5 @@ def system_status() -> dict[str, object]:
         "email": {"ok": email_ok, "detail": email_detail},
         "ai": ai_status,
         "metrics": api_latency_bucket(),
+        "checked_at": datetime.now(timezone.utc).isoformat(),
     }

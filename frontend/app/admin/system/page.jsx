@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AuthWall from "../../../components/AuthWall";
 import { fetchWithAuth } from "../../../lib/api";
@@ -41,31 +41,44 @@ export default function AdminSystemPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
+  const load = useCallback(async (allowUpdate = true) => {
+    if (allowUpdate) {
       setLoading(true);
       setError("");
-      try {
-        const res = await fetchWithAuth("/api/admin/status");
-        if (!res.ok) {
-          throw new Error(await res.text());
-        }
-        const payload = await res.json();
-        if (mounted) setData(payload);
-      } catch (err) {
-        if (mounted) setError(err.message || "Unable to load status");
-      } finally {
-        if (mounted) setLoading(false);
-      }
     }
-
-    load();
-    return () => {
-      mounted = false;
-    };
+    try {
+      const res = await fetchWithAuth("/api/admin/status");
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+      const payload = await res.json();
+      if (allowUpdate) {
+        setData(payload);
+        setLastUpdated(payload.checked_at ? new Date(payload.checked_at) : new Date());
+      }
+    } catch (err) {
+      if (allowUpdate) setError(err.message || "Unable to load status");
+    } finally {
+      if (allowUpdate) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const hydrate = async () => {
+      await load(active);
+    };
+
+    hydrate();
+    const interval = setInterval(hydrate, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [load]);
 
   const cards = useMemo(() => {
     if (!data) return [];
@@ -105,6 +118,17 @@ export default function AdminSystemPage() {
         <p className="muted" style={{ margin: 0 }}>
           Health, SMTP, and AI readiness for this deployment. Metrics mirror the backend status endpoint.
         </p>
+
+        <div className="pill-row" style={{ alignItems: "center", gap: "0.5rem" }}>
+          <button type="button" className="pill" onClick={load} disabled={loading}>
+            {loading ? "Refreshing…" : "Refresh now"}
+          </button>
+          {lastUpdated && (
+            <span className="tiny muted">
+              Updated {lastUpdated.toLocaleTimeString()} ({lastUpdated.toLocaleDateString()})
+            </span>
+          )}
+        </div>
 
         {loading && <div className="status-info">Loading live status…</div>}
         {error && <div className="status-error">{error}</div>}
