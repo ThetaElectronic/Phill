@@ -63,6 +63,18 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   - Change password: `curl -X POST $NEXT_BACKEND_URL/api/users/me/password -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"current_password":"old","new_password":"new-secret"}'`
   - On password change, existing tokens stay valid until they expire; refresh from the UI or re-login to rotate them immediately.
 
+### Admin user management
+- Admins and founders can manage users from `/admin/users` (UI) or `/api/users` (API). Admins are constrained to their own company scope and cannot grant a higher role than their own.
+- The UI shows a simple list of existing users you are allowed to see and a form to add new accounts with name, email, password, and role.
+- To add a user via API (honors the same role checks):
+
+  ```bash
+  curl -X POST $NEXT_BACKEND_URL/api/users \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Teammate","email":"person@example.com","password":"TempP@ssw0rd!","role":"user"}'
+  ```
+
 ### Create Nathaniel's admin account
 - To bootstrap `Nathaniel Wilson` with email-based login on the live stack, run this from the repo root (values provided by Nathaniel; update later if needed):
 
