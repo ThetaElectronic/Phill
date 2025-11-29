@@ -24,3 +24,25 @@ async def send_mail(message: EmailMessage) -> None:
         password=_settings.smtp_pass,
         start_tls=True,
     )
+
+
+def smtp_configured() -> bool:
+    """Return True when all SMTP settings are present."""
+
+    return bool(
+        _settings.smtp_host
+        and _settings.smtp_port
+        and _settings.smtp_user
+        and _settings.smtp_pass
+        and _settings.smtp_from
+    )
+
+
+async def send_plain_email(to_email: str, subject: str, body: str) -> None:
+    """Send a simple text email with configuration safety checks."""
+
+    if not smtp_configured():
+        raise RuntimeError("SMTP settings are not configured")
+
+    message = build_message(to_email, subject, body)
+    await send_mail(message)
