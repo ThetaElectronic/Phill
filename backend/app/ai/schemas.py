@@ -8,10 +8,14 @@ class ChatRequest(BaseModel):
     system: str | None = None
     company_id: str | None = None
     user_id: str | None = None
+    persist: bool = False
 
 
 class ChatResponse(BaseModel):
-    output: dict
+    reply: str
+    model: str | None = None
+    id: str | None = None
+    usage: dict | None = None
 
 
 class AiMemoryCreate(BaseModel):
