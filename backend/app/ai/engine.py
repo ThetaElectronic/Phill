@@ -1,17 +1,30 @@
 from typing import Any
 
-import openai
+from openai import APIConnectionError, APIStatusError, OpenAI, OpenAIError, RateLimitError
 
 from app.config import get_settings
 
-_settings = get_settings()
-client = openai.OpenAI(api_key=_settings.openai_api_key)
-
 
 def run_completion(prompt: str, system: str | None = None) -> dict[str, Any]:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        raise RuntimeError("OpenAI API key is not configured")
+    if not settings.ai_model:
+        raise RuntimeError("AI model is not configured")
+
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
-    response = client.chat.completions.create(model="gpt-5.1", messages=messages, max_tokens=256)
+
+    try:
+        client = OpenAI(api_key=settings.openai_api_key)
+        response = client.chat.completions.create(
+            model=settings.ai_model,
+            messages=messages,
+            max_tokens=256,
+        )
+    except (APIConnectionError, APIStatusError, RateLimitError, OpenAIError) as exc:  # pragma: no cover - network dependent
+        raise RuntimeError(str(exc)) from exc
+
     return response.model_dump()
