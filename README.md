@@ -55,6 +55,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - API login options:
   - JSON: `curl -X POST $NEXT_BACKEND_URL/api/auth/login -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"your_password"}'`
   - OAuth2 form (used by the frontend): `curl -X POST $NEXT_BACKEND_URL/api/auth/token -H 'Content-Type: application/x-www-form-urlencoded' -d 'username=you@example.com&password=your_password'`
+  - JSON to the token endpoint (username or email allowed): `curl -X POST $NEXT_BACKEND_URL/api/auth/token -H 'Content-Type: application/json' -d '{"username":"you@example.com","password":"your_password"}'`
 
 ### Self-service profile and password
 - Signed-in users can visit `/account` to update their **name/username** or change their **password** without admin help.

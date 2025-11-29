@@ -4,9 +4,8 @@ import hashlib
 import logging
 import secrets
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr, Field
+from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request, status
+from pydantic import BaseModel, EmailStr, Field, ValidationError
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
@@ -41,6 +40,12 @@ class ConfirmResetPayload(BaseModel):
     new_password: str = Field(..., min_length=8)
 
 
+class TokenLoginPayload(BaseModel):
+    email: EmailStr | None = None
+    username: str | None = None
+    password: str
+
+
 def _authenticate(identifier: str, password: str, session: Session) -> User:
     user = session.exec(
         select(User).where(or_(User.username == identifier, User.email == identifier))
@@ -51,11 +56,53 @@ def _authenticate(identifier: str, password: str, session: Session) -> User:
 
 
 @router.post("/token")
+async def login_for_access_token(
+    request: Request,
+    session: Session = Depends(get_session),
+    username: str | None = Form(None),
+    password: str | None = Form(None),
+) -> dict[str, str]:
+    identifier: str | None = None
+    secret: str | None = None
+
+    if request.headers.get("content-type", "").startswith("application/json"):
+        try:
+            payload = TokenLoginPayload.model_validate(await request.json())
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
+            )
+
+        identifier = payload.email or payload.username
+        secret = payload.password
+    else:
+        identifier = username
+        secret = password
+
+    if not identifier or not secret:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="username/email and password are required",
+        )
+
+    user = _authenticate(identifier, secret, session)
+
+@router.post("/token")
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)
 ) -> dict[str, str]:
     user = _authenticate(form_data.username, form_data.password, session)
 
+    return {
+        "access_token": create_access_token(user.id),
+        "refresh_token": create_refresh_token(user.id),
+        "token_type": "bearer",
+    }
+
+
+@router.post("/login")
+def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_session)) -> dict[str, str]:
+    user = _authenticate(payload.email, payload.password, session)
     return {
         "access_token": create_access_token(user.id),
         "refresh_token": create_refresh_token(user.id),
