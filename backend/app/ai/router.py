@@ -1,13 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+import io
+from typing import Any
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pypdf import PdfReader
+from sqlmodel import Session, select
 
 from app.ai.engine import run_completion
 from app.ai.memory import store_memory
 from app.ai.safeguards import SAFE_SYSTEM_PROMPT, apply_safeguards
-from app.ai.schemas import AiMemoryCreate, ChatRequest, ChatResponse
+from app.ai.schemas import AiMemoryCreate, ChatRequest, ChatResponse, DocumentPayload
 from app.db import get_session
 from app.security.dependencies import get_current_active_user
 from app.users.models import User
+from app.ai.tables import AiMemory
+from app.config import get_settings
 
 router = APIRouter()
 
@@ -19,17 +25,158 @@ def chat(
     current_user: User = Depends(get_current_active_user),
 ) -> ChatResponse:
     system_prompt = request.system or SAFE_SYSTEM_PROMPT
-    raw_output = run_completion(request.prompt, system_prompt)
-    safe_output = apply_safeguards(raw_output)
+
+    prompt = request.prompt
+
+    if request.document_ids:
+        documents = _load_documents(request.document_ids, current_user, session)
+        document_sections = []
+        for doc in documents:
+            text = doc["text"] or ""
+            filename = doc.get("filename") or "document"
+            document_sections.append(f"Document: {filename}\n{text}")
+        prompt = "Use the provided documents to answer.\n\n" + "\n\n".join(document_sections) + f"\n\nUser question: {request.prompt}"
+
+    try:
+        raw_output = run_completion(prompt, system_prompt)
+    except RuntimeError as exc:  # pragma: no cover - network dependent
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    message = None
+    choices = raw_output.get("choices") if isinstance(raw_output, dict) else None
+    if isinstance(choices, list) and choices:
+        message = choices[0].get("message", {}).get("content")
+    reply_text = message if isinstance(message, str) else ""
+
+    safe_output = apply_safeguards(reply_text)
 
     memory_company = request.company_id or current_user.company_id
     if request.company_id and request.company_id != current_user.company_id:
         raise HTTPException(status_code=403, detail="Cannot write memory for another company")
 
-    if memory_company:
+    if memory_company and request.persist:
         memory = AiMemoryCreate(
-            company_id=memory_company, data={"prompt": request.prompt, "output": safe_output, "user_id": current_user.id}
+            company_id=memory_company,
+            data={"prompt": request.prompt, "output": safe_output, "user_id": current_user.id, "model": raw_output.get("model")},
         )
         store_memory(memory, session)
 
-    return ChatResponse(output=safe_output)
+    return ChatResponse(reply=safe_output, model=raw_output.get("model"), id=raw_output.get("id"), usage=raw_output.get("usage"))
+
+
+@router.post("/documents", response_model=DocumentPayload)
+async def upload_document(
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> DocumentPayload:
+    if not current_user.company_id:
+        raise HTTPException(status_code=400, detail="User is not linked to a company")
+
+    settings = get_settings()
+    raw_bytes = await file.read()
+    if not raw_bytes:
+        raise HTTPException(status_code=400, detail="File is empty")
+
+    max_size = int(settings.ai_document_max_bytes or 512_000)
+    if len(raw_bytes) > max_size:
+        raise HTTPException(status_code=413, detail=f"File too large (max {max_size} bytes)")
+
+    text = _extract_text(file.filename or "", file.content_type or "", raw_bytes)
+    excerpt = text[:5000]
+
+    memory = AiMemoryCreate(
+        company_id=current_user.company_id,
+        data={
+            "type": "document",
+            "filename": file.filename,
+            "content_type": file.content_type,
+            "size": len(raw_bytes),
+            "text": excerpt,
+        },
+    )
+    record = _store_memory(memory, session)
+
+    return DocumentPayload(
+        id=record.id,
+        filename=file.filename or "document",
+        content_type=file.content_type,
+        size=len(raw_bytes),
+        created_at=record.created_at,
+        excerpt=excerpt[:300],
+    )
+
+
+@router.get("/documents", response_model=list[DocumentPayload])
+def list_documents(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> list[DocumentPayload]:
+    if not current_user.company_id:
+        raise HTTPException(status_code=400, detail="User is not linked to a company")
+
+    records = session.exec(select(AiMemory).where(AiMemory.company_id == current_user.company_id)).all()
+    documents: list[DocumentPayload] = []
+    for record in records:
+        data: dict[str, Any] = record.data or {}
+        if data.get("type") != "document":
+            continue
+        excerpt = (data.get("text") or "")[:300]
+        documents.append(
+            DocumentPayload(
+                id=record.id,
+                filename=data.get("filename") or "document",
+                content_type=data.get("content_type"),
+                size=int(data.get("size") or 0),
+                created_at=record.created_at,
+                excerpt=excerpt,
+            )
+        )
+
+    return documents
+
+
+def _store_memory(payload: AiMemoryCreate, session: Session) -> AiMemory:
+    memory = AiMemory(**payload.model_dump())
+    session.add(memory)
+    session.commit()
+    session.refresh(memory)
+    return memory
+
+
+def _extract_text(filename: str, content_type: str, raw_bytes: bytes) -> str:
+    lowered_name = filename.lower()
+    lowered_type = content_type.lower()
+
+    if "pdf" in lowered_name or lowered_type == "application/pdf":
+        if not PdfReader:
+            raise HTTPException(status_code=500, detail="PDF support is not available")
+        try:
+            pdf = PdfReader(io.BytesIO(raw_bytes))
+            text_chunks = [page.extract_text() or "" for page in pdf.pages]
+            return "\n".join(text_chunks).strip()
+        except Exception as exc:  # pragma: no cover - external library
+            raise HTTPException(status_code=400, detail=f"Could not read PDF: {exc}") from exc
+
+    try:
+        return raw_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw_bytes.decode("latin-1", errors="replace")
+
+
+def _load_documents(ids: list[str], current_user: User, session: Session) -> list[dict[str, Any]]:
+    records = session.exec(select(AiMemory).where(AiMemory.id.in_(ids))).all()
+    documents: list[dict[str, Any]] = []
+
+    for record in records:
+        if record.company_id != current_user.company_id:
+            raise HTTPException(status_code=403, detail="Cannot use another company's documents")
+        data: dict[str, Any] = record.data or {}
+        if data.get("type") != "document":
+            continue
+        documents.append(data)
+
+    if len(documents) != len(ids):
+        raise HTTPException(status_code=404, detail="One or more documents were not found")
+
+    return documents
