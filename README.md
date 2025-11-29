@@ -85,7 +85,8 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   ```
 
 ### Admin system status
-- Visit `/admin/system` to see live readiness for the database, SMTP, and AI configuration. The page calls `/api/admin/status` (admin-only), auto-refreshes every 30 seconds, and surfaces a simple pass/fail indicator per subsystem along with the backend's latency buckets. A **Refresh now** button is available for immediate checks after configuration changes.
+- Visit `/admin/system` to see live readiness for the database, SMTP, and AI configuration. The page calls `/api/admin/status` (admin-only), auto-refreshes every 30 seconds, and surfaces both an overall status banner and per-subsystem indicators along with the backend's latency buckets. A **Refresh now** button is available for immediate checks after configuration changes.
+- The status endpoint reports `status` = `ok` only when the database, SMTP settings, and AI configuration are all ready. It also includes the current environment (`ENV`), version tag (`APP_VERSION`, defaults to `dev`), and the UTC timestamp of the last check.
 - API equivalent:
 
   ```bash

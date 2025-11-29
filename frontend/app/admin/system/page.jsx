@@ -104,6 +104,10 @@ export default function AdminSystemPage() {
     ];
   }, [data]);
 
+  const overallHealthy = data?.status === "ok";
+  const environment = data?.environment || "unknown";
+  const version = data?.version || "dev";
+
   return (
     <AuthWall
       title="Admin system panel is protected"
@@ -132,6 +136,27 @@ export default function AdminSystemPage() {
 
         {loading && <div className="status-info">Loading live status…</div>}
         {error && <div className="status-error">{error}</div>}
+
+        {!loading && !error && data && (
+          <section className="glass stack" style={{ gap: "0.4rem" }}>
+            <div className="pill-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+              <StatusPill
+                ok={overallHealthy}
+                label={overallHealthy ? "All systems healthy" : "Some checks need attention"}
+              />
+              <span className="pill pill-outline">Env: {environment}</span>
+              <span className="pill pill-outline">Version: {version}</span>
+              {lastUpdated && (
+                <span className="tiny muted">
+                  Checked {lastUpdated.toLocaleTimeString()} ({lastUpdated.toLocaleDateString()})
+                </span>
+              )}
+            </div>
+            <p className="muted small" style={{ margin: 0 }}>
+              Overall status is based on database connectivity, SMTP readiness, and AI configuration.
+            </p>
+          </section>
+        )}
 
         {!loading && !error && data && (
           <div className="grid three" style={{ gap: "1rem" }}>
