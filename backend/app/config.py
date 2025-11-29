@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     env: str = Field("development", alias="ENV")
+    app_version: str = Field("dev", alias="APP_VERSION")
     api_host: str = Field("http://localhost:8001", alias="API_HOST")
     frontend_url: str = Field("http://localhost:3000", alias="FRONTEND_URL")
 
