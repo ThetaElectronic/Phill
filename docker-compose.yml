@@ -67,6 +67,7 @@ services:
       - "443:443"
     volumes:
       - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx-cert-bootstrap.sh:/docker-entrypoint.d/10-generate-cert.sh:ro
       - ./deploy/ssl:/ssl
 
 volumes:
