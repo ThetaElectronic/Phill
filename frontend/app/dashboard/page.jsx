@@ -67,6 +67,9 @@ export default async function DashboardPage() {
             <a className="pill" href="/tickets">
               Tickets
             </a>
+            <a className="pill pill-soft" href="/account">
+              Account
+            </a>
           </div>
         </div>
       </section>
