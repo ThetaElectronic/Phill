@@ -47,6 +47,9 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - After running the script, sign in at `/login` with the credentials you provided. Protected routes stay hidden until authentication succeeds.
 - Rotate the password immediately after testing and store it in a secret manager.
 - `PASSWORD_RESET_EXPIRE_MINUTES` controls how long reset tokens stay valid (default 30 minutes).
+- API login options:
+  - JSON: `curl -X POST $NEXT_BACKEND_URL/api/auth/login -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"your_password"}'`
+  - OAuth2 form (used by the frontend): `curl -X POST $NEXT_BACKEND_URL/api/auth/token -H 'Content-Type: application/x-www-form-urlencoded' -d 'username=you@example.com&password=your_password'`
 
 ### Create Nathaniel's admin account
 - To bootstrap `Nathaniel Wilson` with email-based login on the live stack, run this from the repo root (values provided by Nathaniel; update later if needed):
@@ -66,11 +69,12 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 ### Self-service auth requests (login page)
 - The login page now sends **password reset** and **access requests** to the backend via `/api/auth/request-reset` and `/api/auth/request-access`.
 - Requests are stored server-side (email, IP, user-agent) for follow-up; responses always return `202 Accepted` without revealing whether an account exists.
-- Keep SMTP configured if you want to hook reset emails into your mail provider later; today the requests are recorded only.
+- If SMTP is configured (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`), the backend emails reset tokens and acknowledges access requests automatically; otherwise the requests are still recorded.
+- Admins can verify mail delivery from the UI at `/admin/email` (or by POSTing to `/api/admin/email/test` with `{ "recipient": "you@example.com" }`).
 
 ### Completing a password reset
-- When you submit a reset request, the backend creates a short-lived token. In non-production environments, the raw token is returned in the API response for quick testing. In production, deliver the token via your mailer.
-- Use the login page’s **Confirm reset** form to paste the token and set a new password. Tokens expire after `PASSWORD_RESET_EXPIRE_MINUTES` and can only be used once.
+- When you submit a reset request, the backend creates a short-lived token. In non-production environments, the raw token is returned in the API response for quick testing. In production, the backend emails the token to the address on file and includes a link to `/login?reset=<token>` for convenience.
+- Use the login page’s **Confirm reset** form (or the prefilled reset link) to set a new password. Tokens expire after `PASSWORD_RESET_EXPIRE_MINUTES` and can only be used once.
 
 ## Protected pages are fully hidden until login
 - Unauthenticated visitors are redirected to `/login` and do not see navigation, footer links, or content previews.
@@ -102,7 +106,7 @@ npm run dev
 
 ## Production domain notes (app.jarvis-fuel.com / jarvis-fuel.com)
 - Point both `app.jarvis-fuel.com` and `jarvis-fuel.com` DNS A records at the host IP `129.212.191.100`.
-- The Nginx config now terminates TLS on port 443 for both hosts and redirects HTTP 80 to HTTPS. Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (Cloudflare Origin Certs work here). A missing cert will surface Cloudflare **521** errors because the origin won’t accept HTTPS.
+- The Nginx config now terminates TLS on port 443 for both hosts and redirects HTTP 80 to HTTPS. Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (Cloudflare Origin Certs work here); only install your real certs on the server and avoid committing them to Git. If those files are missing when the container starts, the Nginx entrypoint auto-generates a temporary self-signed certificate (CN defaults to `app.jarvis-fuel.com`, overridable with `TLS_DOMAIN`) so the proxy can boot; replace it with your real cert immediately. You can also create one manually with `deploy/ssl/generate-self-signed.sh <domain>` and keep it out of Git.
 - When running on the host, keep `NEXT_PUBLIC_API_URL=/api` so browser requests use the same origin; Nginx proxies `/api` to the backend container.
 - After updating DNS and adding certificates, deploy with `docker compose up --build -d` and verify the proxy at `https://app.jarvis-fuel.com/healthz` and the API at `https://app.jarvis-fuel.com/api/health`.
 
@@ -137,7 +141,18 @@ cp .env.example .env
 - Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults.
 
 4) Provide TLS certs for the origin so Cloudflare can connect on port 443 (prevents 521 errors):
-   - Place your certificate and key at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` (for Cloudflare Origin Certs, download the PEM + key and save them here).
+   - Place your real certificate and key on the server at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` before going live. The `/deploy/ssl` directory is ignored by Git so you don’t accidentally commit private keys.
+   - If those files are missing when the Nginx container starts, it now auto-generates a temporary self-signed certificate so the proxy can boot. Override the CN with `TLS_DOMAIN=<your-domain>` (defaults to `app.jarvis-fuel.com`). Replace the generated files with your real cert immediately after issuance.
+   - You can also pre-generate a throwaway self-signed pair locally (do **not** commit it):
+     - Easiest: `bash deploy/ssl/generate-self-signed.sh app.jarvis-fuel.com`
+     - Manual OpenSSL equivalent:
+       ```bash
+       openssl req -x509 -nodes -days 365 \
+         -newkey rsa:2048 \
+         -keyout deploy/ssl/privkey.pem \
+         -out deploy/ssl/fullchain.pem \
+         -subj "/CN=app.jarvis-fuel.com"
+       ```
    - Keep Cloudflare in **Full (Strict)** or **Full** mode so it reaches the origin over HTTPS.
    - Port 80 is kept open only to redirect to HTTPS and to serve `/healthz`.
 
