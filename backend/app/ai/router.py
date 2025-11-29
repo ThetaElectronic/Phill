@@ -115,7 +115,11 @@ def list_documents(
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User is not linked to a company")
 
-    records = session.exec(select(AiMemory).where(AiMemory.company_id == current_user.company_id)).all()
+    records = session.exec(
+        select(AiMemory)
+        .where(AiMemory.company_id == current_user.company_id)
+        .order_by(AiMemory.created_at.desc())
+    ).all()
     documents: list[DocumentPayload] = []
     for record in records:
         data: dict[str, Any] = record.data or {}
@@ -134,6 +138,24 @@ def list_documents(
         )
 
     return documents
+
+
+@router.delete("/documents/{document_id}", status_code=204)
+def delete_document(
+    document_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> None:
+    record = session.get(AiMemory, document_id)
+    if not record or record.company_id != current_user.company_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    data: dict[str, Any] = record.data or {}
+    if data.get("type") != "document":
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    session.delete(record)
+    session.commit()
 
 
 def _store_memory(payload: AiMemoryCreate, session: Session) -> AiMemory:

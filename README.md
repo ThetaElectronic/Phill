@@ -99,6 +99,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 ### AI chat with document grounding
 - Upload PDFs or text files on the `/ai` page to ground the next reply. Uploaded documents stay scoped to your company and are trimmed to the first ~5k characters for safety. The default upload limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed.
 - Select one or more documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material.
+- Remove a document at any time from the `/ai` page or via the API; deletions are immediate and scoped to your company.
 - API examples:
 
   ```bash
@@ -112,6 +113,10 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
     -H "Authorization: Bearer <token>" \
     -H "Content-Type: application/json" \
     -d '{"prompt":"Summarize the SOP","document_ids":["<doc_id>"]}'
+
+  # Delete an uploaded document (it must belong to your company)
+  curl -X DELETE "$NEXT_BACKEND_URL/api/ai/documents/<doc_id>" \
+    -H "Authorization: Bearer <token>"
   ```
 
 ### Create Nathaniel's admin account

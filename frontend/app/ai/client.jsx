@@ -17,6 +17,7 @@ export default function AiClient({ session }) {
   const [documents, setDocuments] = useState([]);
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
+  const [docStatus, setDocStatus] = useState({ state: "idle" });
 
   useEffect(() => {
     setStatus((prev) => (prev.state === "idle" ? prev : prev));
@@ -106,6 +107,25 @@ export default function AiClient({ session }) {
     setSelectedDocs((prev) => (prev.includes(id) ? prev.filter((docId) => docId !== id) : [...prev, id]));
   };
 
+  const removeDocument = async (doc) => {
+    if (!doc?.id) return;
+    setDocStatus({ state: "loading", message: `Removing ${doc.filename || "document"}` });
+    try {
+      const res = await fetchWithAuth(`/ai/documents/${doc.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        const message = payload?.detail || `Delete failed (${res.status})`;
+        setDocStatus({ state: "error", message });
+        return;
+      }
+      setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
+      setSelectedDocs((prev) => prev.filter((item) => item !== doc.id));
+      setDocStatus({ state: "success", message: `${doc.filename || "Document"} removed` });
+    } catch (error) {
+      setDocStatus({ state: "error", message: error instanceof Error ? error.message : "Unable to delete" });
+    }
+  };
+
   return (
     <AuthWall session={tokens} title="AI chat is protected" description="Sign in to use Phill AI with tenant-scoped memory.">
       <section className="grid" style={{ gap: "1.5rem" }}>
@@ -145,21 +165,35 @@ export default function AiClient({ session }) {
               <div className="stack" style={{ gap: "0.35rem", maxHeight: "180px", overflow: "auto" }}>
                 {documents.length === 0 && <div className="muted tiny">No documents uploaded yet</div>}
                 {documents.map((doc) => (
-                  <label key={doc.id} className="chip-row" style={{ gap: "0.4rem", alignItems: "start" }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedDocs.includes(doc.id)}
-                      onChange={() => toggleDocument(doc.id)}
-                    />
-                    <div className="stack" style={{ gap: "0.15rem" }}>
-                      <span className="tiny" style={{ fontWeight: 600 }}>
-                        {doc.filename || "Document"}
-                      </span>
-                      <span className="tiny muted">{doc.excerpt || "No preview"}</span>
+                  <div key={doc.id} className="stack surface" style={{ gap: "0.4rem", padding: "0.5rem" }}>
+                    <label className="chip-row" style={{ gap: "0.4rem", alignItems: "start" }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedDocs.includes(doc.id)}
+                        onChange={() => toggleDocument(doc.id)}
+                      />
+                      <div className="stack" style={{ gap: "0.15rem" }}>
+                        <span className="tiny" style={{ fontWeight: 600 }}>
+                          {doc.filename || "Document"}
+                        </span>
+                        <span className="tiny muted">
+                          {doc.size ? `${Math.round(doc.size / 1024)} KB` : ""}
+                          {doc.size ? " • " : ""}
+                          {doc.excerpt || "No preview"}
+                        </span>
+                      </div>
+                    </label>
+                    <div className="chip-row" style={{ justifyContent: "space-between", gap: "0.35rem" }}>
+                      <span className="tiny muted">Uploaded {new Date(doc.created_at).toLocaleString()}</span>
+                      <button type="button" className="secondary" onClick={() => removeDocument(doc)}>
+                        Remove
+                      </button>
                     </div>
-                  </label>
+                  </div>
                 ))}
               </div>
+              {docStatus.state === "error" && <div className="status-error">{docStatus.message}</div>}
+              {docStatus.state === "success" && <div className="status-success">{docStatus.message}</div>}
             </div>
           </div>
 
