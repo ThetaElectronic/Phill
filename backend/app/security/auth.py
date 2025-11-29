@@ -50,21 +50,22 @@ def _authenticate(identifier: str, password: str, session: Session) -> User:
     return user
 
 
-def _authenticate(identifier: str, password: str, session: Session) -> User:
-    user = session.exec(
-        select(User).where(or_(User.username == identifier, User.email == identifier))
-    ).first()
-    if not user or not verify_password(password, user.password_hash) or user.disabled:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
-    return user
-
-
 @router.post("/token")
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)
 ) -> dict[str, str]:
     user = _authenticate(form_data.username, form_data.password, session)
 
+    return {
+        "access_token": create_access_token(user.id),
+        "refresh_token": create_refresh_token(user.id),
+        "token_type": "bearer",
+    }
+
+
+@router.post("/login")
+def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_session)) -> dict[str, str]:
+    user = _authenticate(payload.email, payload.password, session)
     return {
         "access_token": create_access_token(user.id),
         "refresh_token": create_refresh_token(user.id),

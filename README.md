@@ -84,6 +84,14 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
     -d '{"password":"NewTempP@ssw0rd!"}'
   ```
 
+### Admin system status
+- Visit `/admin/system` to see live readiness for the database, SMTP, and AI configuration. The page calls `/api/admin/status` (admin-only) and surfaces a simple pass/fail indicator per subsystem along with the backend's latency buckets.
+- API equivalent:
+
+  ```bash
+  curl -H "Authorization: Bearer <token>" $NEXT_BACKEND_URL/api/admin/status | jq
+  ```
+
 ### Create Nathaniel's admin account
 - To bootstrap `Nathaniel Wilson` with email-based login on the live stack, run this from the repo root (values provided by Nathaniel; update later if needed):
 

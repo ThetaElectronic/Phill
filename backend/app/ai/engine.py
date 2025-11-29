@@ -5,6 +5,18 @@ from openai import APIConnectionError, APIStatusError, OpenAI, OpenAIError, Rate
 from app.config import get_settings
 
 
+def ai_configuration() -> dict[str, Any]:
+    settings = get_settings()
+    configured = bool(settings.openai_api_key and settings.ai_model)
+    detail = None
+    if not settings.openai_api_key:
+        detail = "OPENAI_API_KEY is not set"
+    elif not settings.ai_model:
+        detail = "AI_MODEL is not set"
+
+    return {"ok": configured, "model": settings.ai_model, "detail": detail}
+
+
 def run_completion(prompt: str, system: str | None = None) -> dict[str, Any]:
     settings = get_settings()
     if not settings.openai_api_key:

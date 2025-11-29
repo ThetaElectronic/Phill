@@ -34,3 +34,15 @@ def create_db_and_tables(max_attempts: int = 10, wait_seconds: float = 3.0) -> N
                 raise
 
             time.sleep(wait_seconds)
+
+
+def ping_database() -> tuple[bool, str | None]:
+    """Return whether the database connection responds to a simple query."""
+
+    try:
+        with engine.connect() as connection:
+            connection.exec_driver_sql("SELECT 1")
+        return True, None
+    except Exception as exc:  # pragma: no cover - environment dependent
+        logger.warning("Database ping failed: %s", exc)
+        return False, str(exc)
