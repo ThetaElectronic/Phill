@@ -150,6 +150,7 @@ function InlineActions({ onReset, defaultToken = "" }) {
             <input
               type="password"
               required
+              minLength={8}
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               placeholder="••••••••"

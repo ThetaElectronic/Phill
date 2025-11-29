@@ -6,7 +6,7 @@ import secrets
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
@@ -38,7 +38,16 @@ class EmailLoginPayload(BaseModel):
 
 class ConfirmResetPayload(BaseModel):
     token: str
-    new_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+def _authenticate(identifier: str, password: str, session: Session) -> User:
+    user = session.exec(
+        select(User).where(or_(User.username == identifier, User.email == identifier))
+    ).first()
+    if not user or not verify_password(password, user.password_hash) or user.disabled:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
+    return user
 
 
 def _authenticate(identifier: str, password: str, session: Session) -> User:

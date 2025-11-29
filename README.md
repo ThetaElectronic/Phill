@@ -107,7 +107,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 
 ### Completing a password reset
 - When you submit a reset request, the backend creates a short-lived token. In non-production environments, the raw token is returned in the API response for quick testing. In production, the backend emails the token to the address on file and includes a link to `/login?reset=<token>` for convenience.
-- Use the login page’s **Confirm reset** form (or the prefilled reset link) to set a new password. Tokens expire after `PASSWORD_RESET_EXPIRE_MINUTES` and can only be used once.
+- Use the login page’s **Confirm reset** form (or the prefilled reset link) to set a new password. Tokens expire after `PASSWORD_RESET_EXPIRE_MINUTES`, enforce the 8+ character password policy, and can only be used once.
 
 ## Protected pages are fully hidden until login
 - Unauthenticated visitors are redirected to `/login` and do not see navigation, footer links, or content previews.
