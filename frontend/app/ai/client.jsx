@@ -14,10 +14,29 @@ export default function AiClient({ session }) {
   const chatUrl = useMemo(() => apiUrl("/ai/chat"), []);
   const [useMemory, setUseMemory] = useState(false);
   const [meta, setMeta] = useState(null);
+  const [documents, setDocuments] = useState([]);
+  const [selectedDocs, setSelectedDocs] = useState([]);
+  const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
 
   useEffect(() => {
     setStatus((prev) => (prev.state === "idle" ? prev : prev));
   }, []);
+
+  useEffect(() => {
+    const loadDocuments = async () => {
+      if (!tokens) return;
+      try {
+        const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
+        if (!res.ok) return;
+        const data = await res.json();
+        setDocuments(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Unable to load documents", error);
+      }
+    };
+
+    loadDocuments();
+  }, [tokens]);
 
   const sendMessage = async () => {
     if (!tokens) {
@@ -31,7 +50,7 @@ export default function AiClient({ session }) {
       const res = await fetchWithAuth("/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: input, persist: useMemory }),
+        body: JSON.stringify({ prompt: input, persist: useMemory, document_ids: selectedDocs }),
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
@@ -49,10 +68,42 @@ export default function AiClient({ session }) {
       ]);
       setMeta({ model: data?.model, usage: data?.usage });
       setInput("");
+      setSelectedDocs([]);
       setStatus({ state: "success" });
     } catch (error) {
       setStatus({ state: "error", message: error instanceof Error ? error.message : "Unable to chat" });
     }
+  };
+
+  const uploadDocument = async (file) => {
+    if (!file || !tokens) return;
+    setUploadStatus({ state: "loading", message: `Uploading ${file.name}` });
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetchWithAuth(
+        "/ai/documents",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = data?.detail || `Upload failed (${res.status})`;
+        setUploadStatus({ state: "error", message });
+        return;
+      }
+      setDocuments((prev) => [data, ...prev]);
+      setUploadStatus({ state: "success", message: `${file.name} added` });
+    } catch (error) {
+      setUploadStatus({ state: "error", message: error instanceof Error ? error.message : "Upload failed" });
+    }
+  };
+
+  const toggleDocument = (id) => {
+    setSelectedDocs((prev) => (prev.includes(id) ? prev.filter((docId) => docId !== id) : [...prev, id]));
   };
 
   return (
@@ -71,6 +122,47 @@ export default function AiClient({ session }) {
         </div>
 
         <div className="card stack" style={{ gap: "1rem" }}>
+          <div className="grid two-col" style={{ gap: "0.75rem" }}>
+            <div className="stack" style={{ gap: "0.35rem" }}>
+              <label className="stack" style={{ gap: "0.25rem" }}>
+                <span>Upload a document (PDF or text)</span>
+                <input
+                  type="file"
+                  accept=".pdf,text/plain,.txt,.md,.markdown"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) uploadDocument(file);
+                  }}
+                />
+              </label>
+              {uploadStatus.state === "loading" && <div className="tiny muted">{uploadStatus.message}</div>}
+              {uploadStatus.state === "error" && <div className="status-error">{uploadStatus.message}</div>}
+              {uploadStatus.state === "success" && <div className="status-success">{uploadStatus.message}</div>}
+            </div>
+
+            <div className="stack" style={{ gap: "0.35rem" }}>
+              <span className="tiny muted">Attach documents to ground the reply</span>
+              <div className="stack" style={{ gap: "0.35rem", maxHeight: "180px", overflow: "auto" }}>
+                {documents.length === 0 && <div className="muted tiny">No documents uploaded yet</div>}
+                {documents.map((doc) => (
+                  <label key={doc.id} className="chip-row" style={{ gap: "0.4rem", alignItems: "start" }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedDocs.includes(doc.id)}
+                      onChange={() => toggleDocument(doc.id)}
+                    />
+                    <div className="stack" style={{ gap: "0.15rem" }}>
+                      <span className="tiny" style={{ fontWeight: 600 }}>
+                        {doc.filename || "Document"}
+                      </span>
+                      <span className="tiny muted">{doc.excerpt || "No preview"}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="grid two-col" style={{ gap: "0.75rem", alignItems: "end" }}>
             <label className="stack" style={{ gap: "0.35rem" }}>
               <span>Prompt</span>

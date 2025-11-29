@@ -96,6 +96,24 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   curl -H "Authorization: Bearer <token>" $NEXT_BACKEND_URL/api/admin/status | jq
   ```
 
+### AI chat with document grounding
+- Upload PDFs or text files on the `/ai` page to ground the next reply. Uploaded documents stay scoped to your company and are trimmed to the first ~5k characters for safety. The default upload limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed.
+- Select one or more documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material.
+- API examples:
+
+  ```bash
+  # Upload a PDF or text file
+  curl -X POST "$NEXT_BACKEND_URL/api/ai/documents" \
+    -H "Authorization: Bearer <token>" \
+    -F "file=@/path/to/guide.pdf"
+
+  # Chat with a document attached (replace <doc_id> from the upload response)
+  curl -X POST "$NEXT_BACKEND_URL/api/ai/chat" \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{"prompt":"Summarize the SOP","document_ids":["<doc_id>"]}'
+  ```
+
 ### Create Nathaniel's admin account
 - To bootstrap `Nathaniel Wilson` with email-based login on the live stack, run this from the repo root (values provided by Nathaniel; update later if needed):
 
@@ -183,7 +201,7 @@ cp .env.example .env
 3) Edit `.env` for production:
 - Set `API_HOST=https://app.jarvis-fuel.com` and `FRONTEND_URL=https://app.jarvis-fuel.com`.
 - Keep `NEXT_PUBLIC_API_URL=/api` and `NEXT_BACKEND_URL=http://backend:8001` so the frontend proxies through Nginx to the backend container.
-- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults.
+- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes).
 
 4) Provide TLS certs for the origin so Cloudflare can connect on port 443 (prevents 521 errors):
    - Place your real certificate and key on the server at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` before going live. The `/deploy/ssl` directory is ignored by Git so you don’t accidentally commit private keys.

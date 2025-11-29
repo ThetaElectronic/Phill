@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
     company_id: str | None = None
     user_id: str | None = None
     persist: bool = False
+    document_ids: list[str] = Field(default_factory=list)
 
 
 class ChatResponse(BaseModel):
@@ -16,6 +17,15 @@ class ChatResponse(BaseModel):
     model: str | None = None
     id: str | None = None
     usage: dict | None = None
+
+
+class DocumentPayload(BaseModel):
+    id: str
+    filename: str
+    content_type: str | None = None
+    size: int
+    created_at: datetime
+    excerpt: str | None = None
 
 
 class AiMemoryCreate(BaseModel):
