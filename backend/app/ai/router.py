@@ -187,15 +187,19 @@ def _extract_text(filename: str, content_type: str, raw_bytes: bytes) -> str:
 
 
 def _load_documents(ids: list[str], current_user: User, session: Session) -> list[dict[str, Any]]:
-    records = session.exec(select(AiMemory).where(AiMemory.id.in_(ids))).all()
     documents: list[dict[str, Any]] = []
 
-    for record in records:
+    for doc_id in ids:
+        record = session.get(AiMemory, doc_id)
+        if not record:
+            raise HTTPException(status_code=404, detail="Document not found")
         if record.company_id != current_user.company_id:
             raise HTTPException(status_code=403, detail="Cannot use another company's documents")
+
         data: dict[str, Any] = record.data or {}
         if data.get("type") != "document":
-            continue
+            raise HTTPException(status_code=400, detail="Referenced record is not a document")
+
         documents.append(data)
 
     if len(documents) != len(ids):
