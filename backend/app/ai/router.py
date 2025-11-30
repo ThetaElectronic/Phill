@@ -24,12 +24,25 @@ def chat(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ) -> ChatResponse:
+    settings = get_settings()
     system_prompt = request.system or SAFE_SYSTEM_PROMPT
 
     prompt = request.prompt
+    document_ids = []
 
     if request.document_ids:
-        documents = _load_documents(request.document_ids, current_user, session)
+        seen: set[str] = set()
+        for doc_id in request.document_ids:
+            if doc_id in seen:
+                continue
+            seen.add(doc_id)
+            document_ids.append(doc_id)
+
+        max_docs = max(1, settings.ai_max_documents or 5)
+        if len(document_ids) > max_docs:
+            raise HTTPException(status_code=400, detail=f"Too many documents (max {max_docs})")
+
+        documents = _load_documents(document_ids, current_user, session)
         document_sections = []
         for doc in documents:
             text = doc["text"] or ""

@@ -7,6 +7,7 @@ import { fetchWithAuth, apiUrl } from "../../lib/api";
 import { loadTokens } from "../../lib/auth";
 
 export default function AiClient({ session }) {
+  const maxDocuments = Number(process.env.NEXT_PUBLIC_AI_MAX_DOCUMENTS || 5);
   const [tokens] = useState(() => session || loadTokens());
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -104,7 +105,17 @@ export default function AiClient({ session }) {
   };
 
   const toggleDocument = (id) => {
-    setSelectedDocs((prev) => (prev.includes(id) ? prev.filter((docId) => docId !== id) : [...prev, id]));
+    setDocStatus((prev) => (prev.state === "error" || prev.state === "success" ? { state: "idle" } : prev));
+    setSelectedDocs((prev) => {
+      if (prev.includes(id)) return prev.filter((docId) => docId !== id);
+
+      if (prev.length >= maxDocuments) {
+        setDocStatus({ state: "error", message: `Attach up to ${maxDocuments} documents per request.` });
+        return prev;
+      }
+
+      return [...prev, id];
+    });
   };
 
   const removeDocument = async (doc) => {
@@ -161,7 +172,7 @@ export default function AiClient({ session }) {
             </div>
 
             <div className="stack" style={{ gap: "0.35rem" }}>
-              <span className="tiny muted">Attach documents to ground the reply</span>
+              <span className="tiny muted">Attach documents to ground the reply (up to {maxDocuments})</span>
               <div className="stack" style={{ gap: "0.35rem", maxHeight: "180px", overflow: "auto" }}>
                 {documents.length === 0 && <div className="muted tiny">No documents uploaded yet</div>}
                 {documents.map((doc) => (

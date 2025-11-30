@@ -97,8 +97,8 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   ```
 
 ### AI chat with document grounding
-- Upload PDFs or text files on the `/ai` page to ground the next reply. Uploaded documents stay scoped to your company and are trimmed to the first ~5k characters for safety. The default upload limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed.
-- Select one or more documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material.
+- Upload PDFs or text files on the `/ai` page to ground the next reply. Uploaded documents stay scoped to your company and are trimmed to the first ~5k characters for safety. The default upload limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed. Attach up to 5 documents per request by default (configure with `AI_MAX_DOCUMENTS` on the backend and, if desired, `NEXT_PUBLIC_AI_MAX_DOCUMENTS` for the UI hint).
+- Select one or more documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material. The UI prevents selecting more than the configured max.
 - Remove a document at any time from the `/ai` page or via the API; deletions are immediate and scoped to your company.
 - API examples:
 
@@ -206,7 +206,7 @@ cp .env.example .env
 3) Edit `.env` for production:
 - Set `API_HOST=https://app.jarvis-fuel.com` and `FRONTEND_URL=https://app.jarvis-fuel.com`.
 - Keep `NEXT_PUBLIC_API_URL=/api` and `NEXT_BACKEND_URL=http://backend:8001` so the frontend proxies through Nginx to the backend container.
-- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes).
+- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes) and limit per-request attachments with `AI_MAX_DOCUMENTS` (defaults to 5). If you change `AI_MAX_DOCUMENTS`, mirror it in `NEXT_PUBLIC_AI_MAX_DOCUMENTS` for the frontend hint.
 
 4) Provide TLS certs for the origin so Cloudflare can connect on port 443 (prevents 521 errors):
    - Place your real certificate and key on the server at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` before going live. The `/deploy/ssl` directory is ignored by Git so you don’t accidentally commit private keys.
