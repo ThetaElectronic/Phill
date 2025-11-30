@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pypdf import PdfReader
 from sqlmodel import Session, select
 
-from app.ai.engine import run_completion
+from app.ai.engine import ai_configuration, run_completion
 from app.ai.memory import store_memory
 from app.ai.safeguards import SAFE_SYSTEM_PROMPT, apply_safeguards
 from app.ai.schemas import AiMemoryCreate, ChatRequest, ChatResponse, DocumentPayload
@@ -16,6 +16,13 @@ from app.ai.tables import AiMemory
 from app.config import get_settings
 
 router = APIRouter()
+
+
+@router.get("/status")
+def ai_status() -> dict[str, Any]:
+    """Expose AI configuration readiness for the UI."""
+
+    return ai_configuration()
 
 
 @router.post("/chat", response_model=ChatResponse)

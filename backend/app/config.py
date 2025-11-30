@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     smtp_user: str | None = Field(None, alias="SMTP_USER")
     smtp_pass: str | None = Field(None, alias="SMTP_PASS")
     smtp_from: str | None = Field(None, alias="SMTP_FROM")
+    smtp_starttls: bool = Field(True, alias="SMTP_STARTTLS")
+    smtp_use_tls: bool = Field(False, alias="SMTP_USE_TLS")
 
     s3_enabled: bool = Field(False, alias="S3_ENABLED")
     s3_bucket: str | None = Field(None, alias="S3_BUCKET")

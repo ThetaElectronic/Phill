@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import AuthWall from "../../../components/AuthWall";
 import { fetchWithAuth } from "../../../lib/api";
@@ -8,7 +8,27 @@ import { fetchWithAuth } from "../../../lib/api";
 export default function AdminEmailPage() {
   const [recipient, setRecipient] = useState("");
   const [status, setStatus] = useState({ state: "idle", message: "" });
+  const [config, setConfig] = useState({ state: "loading" });
   const hasRecipient = useMemo(() => recipient.trim().length > 0, [recipient]);
+
+  useEffect(() => {
+    const loadStatus = async () => {
+      try {
+        const res = await fetchWithAuth("/api/admin/email/status", { headers: { Accept: "application/json" } });
+        if (!res.ok) {
+          setConfig({ state: "error", message: "Unable to load SMTP status" });
+          return;
+        }
+        const data = await res.json();
+        setConfig({ state: data?.ok ? "ok" : "missing", detail: data?.detail, settings: data?.settings });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to load status";
+        setConfig({ state: "error", message });
+      }
+    };
+
+    loadStatus();
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -56,6 +76,17 @@ export default function AdminEmailPage() {
           <p className="muted" style={{ margin: 0 }}>
             Use this form to verify SMTP credentials before enabling password reset and request notifications.
           </p>
+          {config.state === "missing" && (
+            <div className="status-error">{config.detail || "SMTP credentials are missing."}</div>
+          )}
+          {config.state === "ok" && config.settings && (
+            <div className="tiny muted" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <span className="pill pill-outline">Host: {config.settings.host}</span>
+              <span className="pill pill-outline">From: {config.settings.from}</span>
+              {config.settings.use_tls && <span className="pill pill-outline">TLS</span>}
+              {config.settings.starttls && !config.settings.use_tls && <span className="pill pill-outline">STARTTLS</span>}
+            </div>
+          )}
         </div>
 
         <form className="glass card stack" style={{ gap: "0.75rem" }} onSubmit={handleSubmit}>
@@ -70,7 +101,14 @@ export default function AdminEmailPage() {
               autoComplete="email"
             />
           </label>
-          <button type="submit" disabled={!hasRecipient || status.state === "loading"}>
+          <button
+            type="submit"
+            disabled={
+              !hasRecipient ||
+              status.state === "loading" ||
+              (config.state && config.state !== "ok")
+            }
+          >
             {status.state === "loading" ? "Sending…" : "Send test"}
           </button>
 

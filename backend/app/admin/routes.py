@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 
 from app.admin.system_checks import system_status
-from app.communication.email import send_plain_email, smtp_configured
+from app.communication.email import send_plain_email, smtp_configured, smtp_status
 from app.db import get_session
 from app.security.dependencies import require_role
 from app.users.permissions import ROLE_ADMIN
@@ -87,3 +87,10 @@ async def send_test_email(
         raise HTTPException(status_code=502, detail=f"Failed to send email: {exc}") from exc
 
     return {"status": "sent"}
+
+
+@router.get("/email/status")
+def email_status(current_user=Depends(require_role(ROLE_ADMIN))) -> dict[str, object]:
+    status = smtp_status()
+    detail = None if status["configured"] else "SMTP settings are not configured"
+    return {"ok": status["configured"], "detail": detail, "settings": status}

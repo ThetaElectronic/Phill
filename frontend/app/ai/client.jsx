@@ -13,6 +13,7 @@ export default function AiClient({ session }) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState({ state: "idle" });
   const chatUrl = useMemo(() => apiUrl("/ai/chat"), []);
+  const [aiStatus, setAiStatus] = useState({ ok: true });
   const [useMemory, setUseMemory] = useState(false);
   const [meta, setMeta] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -26,6 +27,19 @@ export default function AiClient({ session }) {
   }, []);
 
   useEffect(() => {
+    const loadAiStatus = async () => {
+      try {
+        const res = await fetch(apiUrl("/ai/status"));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && typeof data === "object") setAiStatus(data);
+      } catch (error) {
+        console.error("Unable to load AI status", error);
+      }
+    };
+
+    loadAiStatus();
+
     const loadDocuments = async () => {
       if (!tokens) return;
       try {
@@ -44,6 +58,10 @@ export default function AiClient({ session }) {
   const sendMessage = async () => {
     if (!tokens) {
       setStatus({ state: "error", message: "Login first" });
+      return;
+    }
+    if (aiStatus && aiStatus.ok === false) {
+      setStatus({ state: "error", message: aiStatus?.detail || "AI is not configured" });
       return;
     }
     if (!input.trim()) return;
@@ -80,6 +98,10 @@ export default function AiClient({ session }) {
 
   const uploadDocument = async (file) => {
     if (!file || !tokens) return;
+    if (aiStatus && aiStatus.ok === false) {
+      setUploadStatus({ state: "error", message: aiStatus?.detail || "AI is not configured" });
+      return;
+    }
     setUploadStatus({ state: "loading", message: `Uploading ${file.name}` });
     const formData = new FormData();
     formData.append("file", file);
@@ -151,6 +173,11 @@ export default function AiClient({ session }) {
           <p className="muted" style={{ margin: 0 }}>
             Calls <code>{chatUrl}</code> with your bearer token. Toggle memory to persist company-scoped chat history.
           </p>
+          {aiStatus?.ok === false && (
+            <div className="status-error" style={{ maxWidth: "720px" }}>
+              AI is not ready: {aiStatus?.detail || "missing configuration"}
+            </div>
+          )}
         </div>
 
         <div className="card stack" style={{ gap: "1rem" }}>
@@ -169,8 +196,14 @@ export default function AiClient({ session }) {
                       if (fileInputRef.current) fileInputRef.current.value = "";
                     }}
                     style={{ display: "none" }}
+                    disabled={aiStatus?.ok === false}
                   />
-                  <button type="button" className="secondary" onClick={() => fileInputRef.current?.click()}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={aiStatus?.ok === false}
+                  >
                     Choose file
                   </button>
                   <span className="tiny muted">Max size enforced by server</span>
@@ -233,7 +266,7 @@ export default function AiClient({ session }) {
                 <input type="checkbox" checked={useMemory} onChange={(e) => setUseMemory(e.target.checked)} />
                 <span className="tiny muted">Persist to company memory</span>
               </label>
-              <button type="button" onClick={sendMessage} disabled={status.state === "loading"}>
+              <button type="button" onClick={sendMessage} disabled={status.state === "loading" || aiStatus?.ok === false}>
                 {status.state === "loading" ? "Sending…" : "Send"}
               </button>
               <div className="tiny muted">Bearer token required</div>

@@ -137,8 +137,8 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 ### Self-service auth requests (login page)
 - The login page now sends **password reset** and **access requests** to the backend via `/api/auth/request-reset` and `/api/auth/request-access`.
 - Requests are stored server-side (email, IP, user-agent) for follow-up; responses always return `202 Accepted` without revealing whether an account exists.
-- If SMTP is configured (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`), the backend emails reset tokens and acknowledges access requests automatically; otherwise the requests are still recorded.
-- Admins can verify mail delivery from the UI at `/admin/email` (or by POSTing to `/api/admin/email/test` with `{ "recipient": "you@example.com" }`).
+- If SMTP is configured (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`), the backend emails reset tokens and acknowledges access requests automatically; otherwise the requests are still recorded. Use `SMTP_STARTTLS=false` if your provider does not support STARTTLS or `SMTP_USE_TLS=true` for implicit TLS (port 465).
+- Admins can verify mail delivery from the UI at `/admin/email` (or by POSTing to `/api/admin/email/test` with `{ "recipient": "you@example.com" }`). The UI also surfaces SMTP readiness from `/api/admin/email/status` before enabling sends.
 
 ### Completing a password reset
 - When you submit a reset request, the backend creates a short-lived token. In non-production environments, the raw token is returned in the API response for quick testing. In production, the backend emails the token to the address on file and includes a link to `/login?reset=<token>` for convenience.
@@ -206,7 +206,11 @@ cp .env.example .env
 3) Edit `.env` for production:
 - Set `API_HOST=https://app.jarvis-fuel.com` and `FRONTEND_URL=https://app.jarvis-fuel.com`.
 - Keep `NEXT_PUBLIC_API_URL=/api` and `NEXT_BACKEND_URL=http://backend:8001` so the frontend proxies through Nginx to the backend container.
-- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes), trim stored document text with `AI_DOCUMENT_MAX_TEXT` (defaults to 20000 characters), and limit per-request attachments with `AI_MAX_DOCUMENTS` (defaults to 5). If you change `AI_MAX_DOCUMENTS`, mirror it in `NEXT_PUBLIC_AI_MAX_DOCUMENTS` for the frontend hint.
+- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes), trim stored document text with `AI_DOCUMENT_MAX_TEXT` (defaults to 20000 characters), and limit per-request attachments with `AI_MAX_DOCUMENTS` (defaults to 5). If you change `AI_MAX_DOCUMENTS`, mirror it in `NEXT_PUBLIC_AI_MAX_DOCUMENTS` for the frontend hint. SMTP supports `SMTP_STARTTLS` (default true) and `SMTP_USE_TLS` (implicit TLS, default false) for providers that require a specific mode.
+
+### AI and SMTP readiness checks
+- `/api/ai/status` reports whether `OPENAI_API_KEY` and `AI_MODEL` are set so the AI UI can guide users before sending requests.
+- `/api/admin/email/status` (admin-only) surfaces whether SMTP credentials are present alongside the configured host and from-address; the `/admin/email` page reads it before enabling test sends.
 
 4) Provide TLS certs for the origin so Cloudflare can connect on port 443 (prevents 521 errors):
    - Place your real certificate and key on the server at `deploy/ssl/fullchain.pem` and `deploy/ssl/privkey.pem` before going live. The `/deploy/ssl` directory is ignored by Git so you don’t accidentally commit private keys.
