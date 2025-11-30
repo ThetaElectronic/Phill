@@ -97,8 +97,8 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   ```
 
 ### AI chat with document grounding
-- Upload PDFs or text files on the `/ai` page to ground the next reply. Choose whether each upload is **company scoped** (default) or shared for **global training** across all tenants. Extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed.
-- Select any number of documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material. Global training files are usable by every company, while company-scoped uploads remain private to their owner.
+- Upload PDFs or text files on the `/ai` page to ground the next reply. Choose whether each upload is **company scoped** (default) or shared for **global training** across all tenants, and adjust the scope later from the document list if needed. Extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed.
+- Select any number of documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material. Global training files are usable by every company, while company-scoped uploads remain private to their owner. Scope changes keep ownership with the original company and take effect immediately.
 - Toggle memory to save the chat under your personal AI profile (tagged to your user and company) so future personality tuning has more examples. Leave it off for ephemeral questions.
 - Remove a document you uploaded at any time from the `/ai` page or via the API; deletions are immediate and limited to the owner company.
 - API examples:
@@ -119,6 +119,12 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   # Delete an uploaded document (it must belong to your company)
   curl -X DELETE "$NEXT_BACKEND_URL/api/ai/documents/<doc_id>" \
     -H "Authorization: Bearer <token>"
+
+  # Change a document scope after upload (owner company only)
+  curl -X PATCH "$NEXT_BACKEND_URL/api/ai/documents/<doc_id>" \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{"scope":"global"}'
   ```
 
 ### Create Nathaniel's admin account

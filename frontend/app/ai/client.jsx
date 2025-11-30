@@ -161,6 +161,29 @@ export default function AiClient({ session }) {
     }
   };
 
+  const updateScope = async (doc, scope) => {
+    if (!doc?.id) return;
+    setDocStatus({ state: "loading", message: `Updating ${doc.filename || "document"}` });
+    try {
+      const res = await fetchWithAuth(`/ai/documents/${doc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = payload?.detail || `Update failed (${res.status})`;
+        setDocStatus({ state: "error", message });
+        return;
+      }
+
+      setDocuments((prev) => prev.map((item) => (item.id === doc.id ? payload : item)));
+      setDocStatus({ state: "success", message: `${doc.filename || "Document"} scope updated` });
+    } catch (error) {
+      setDocStatus({ state: "error", message: error instanceof Error ? error.message : "Unable to update" });
+    }
+  };
+
   return (
     <AuthWall session={tokens} title="AI chat is protected" description="Sign in to use Phill AI with tenant-scoped memory.">
       <section className="grid" style={{ gap: "1.5rem" }}>
@@ -262,22 +285,33 @@ export default function AiClient({ session }) {
                         </span>
                       </div>
                     </label>
-                    <div className="chip-row" style={{ justifyContent: "space-between", gap: "0.35rem" }}>
-                      <div className="badge-list tiny muted" style={{ gap: "0.35rem" }}>
-                        <span className={doc.scope === "global" ? "pill pill-outline" : "pill"}>
-                          {doc.scope === "global" ? "Global training" : "Company scoped"}
-                        </span>
-                        {doc.owner_company_id && doc.scope === "global" && (
-                          <span className="pill pill-outline">Owner: {doc.owner_company_id.slice(0, 8)}…</span>
-                        )}
-                      </div>
-                      <span className="tiny muted">Uploaded {new Date(doc.created_at).toLocaleString()}</span>
+                  <div className="chip-row" style={{ justifyContent: "space-between", gap: "0.35rem" }}>
+                    <div className="badge-list tiny muted" style={{ gap: "0.35rem" }}>
+                      <span className={doc.scope === "global" ? "pill pill-outline" : "pill"}>
+                        {doc.scope === "global" ? "Global training" : "Company scoped"}
+                      </span>
+                      {doc.owner_company_id && doc.scope === "global" && (
+                        <span className="pill pill-outline">Owner: {doc.owner_company_id.slice(0, 8)}…</span>
+                      )}
+                    </div>
+                    <span className="tiny muted">Uploaded {new Date(doc.created_at).toLocaleString()}</span>
+                    <div className="chip-row" style={{ gap: "0.4rem", alignItems: "center" }}>
+                      <label className="tiny muted">Scope</label>
+                      <select
+                        value={doc.scope || "company"}
+                        onChange={(event) => updateScope(doc, event.target.value)}
+                        className="secondary"
+                      >
+                        <option value="company">Company</option>
+                        <option value="global">Global</option>
+                      </select>
                       <button type="button" className="secondary" onClick={() => removeDocument(doc)}>
                         Remove
                       </button>
                     </div>
                   </div>
-                ))}
+                </div>
+              ))}
               </div>
               {docStatus.state === "error" && <div className="status-error">{docStatus.message}</div>}
               {docStatus.state === "success" && <div className="status-success">{docStatus.message}</div>}

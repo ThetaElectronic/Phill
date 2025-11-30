@@ -8,7 +8,13 @@ from sqlmodel import Session, select
 from app.ai.engine import ai_configuration, run_completion
 from app.ai.memory import store_memory
 from app.ai.safeguards import SAFE_SYSTEM_PROMPT, apply_safeguards
-from app.ai.schemas import AiMemoryCreate, ChatRequest, ChatResponse, DocumentPayload
+from app.ai.schemas import (
+    AiMemoryCreate,
+    ChatRequest,
+    ChatResponse,
+    DocumentPayload,
+    DocumentScopeUpdate,
+)
 from app.db import get_session
 from app.security.dependencies import get_current_active_user
 from app.users.models import User
@@ -129,16 +135,7 @@ async def upload_document(
     )
     record = _store_memory(memory, session)
 
-    return DocumentPayload(
-        id=record.id,
-        filename=file.filename or "document",
-        content_type=file.content_type,
-        size=len(raw_bytes),
-        created_at=record.created_at,
-        excerpt=excerpt[:300],
-        scope=scope,
-        owner_company_id=current_user.company_id,
-    )
+    return _document_payload(record)
 
 
 @router.get("/documents", response_model=list[DocumentPayload])
@@ -158,19 +155,7 @@ def list_documents(
         scope = data.get("scope") or "company"
         if record.company_id != current_user.company_id and scope != "global":
             continue
-        excerpt = data.get("excerpt") or (data.get("text") or "")[:300]
-        documents.append(
-            DocumentPayload(
-                id=record.id,
-                filename=data.get("filename") or "document",
-                content_type=data.get("content_type"),
-                size=int(data.get("size") or 0),
-                created_at=record.created_at,
-                excerpt=excerpt,
-                scope=scope,
-                owner_company_id=record.company_id,
-            )
-        )
+        documents.append(_document_payload(record))
 
     return documents
 
@@ -193,12 +178,57 @@ def delete_document(
     session.commit()
 
 
+@router.patch("/documents/{document_id}", response_model=DocumentPayload)
+def update_document_scope(
+    document_id: str,
+    payload: DocumentScopeUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> DocumentPayload:
+    record = session.get(AiMemory, document_id)
+    if not record or record.company_id != current_user.company_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    data: dict[str, Any] = record.data or {}
+    if data.get("type") != "document":
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    scope = (payload.scope or "company").strip().lower()
+    if scope not in {"company", "global"}:
+        raise HTTPException(status_code=400, detail="Invalid scope")
+
+    data["scope"] = scope
+    record.data = data
+    session.add(record)
+    session.commit()
+    session.refresh(record)
+
+    return _document_payload(record)
+
+
 def _store_memory(payload: AiMemoryCreate, session: Session) -> AiMemory:
     memory = AiMemory(**payload.model_dump(exclude_none=True))
     session.add(memory)
     session.commit()
     session.refresh(memory)
     return memory
+
+
+def _document_payload(record: AiMemory) -> DocumentPayload:
+    data: dict[str, Any] = record.data or {}
+    scope = data.get("scope") or "company"
+    excerpt = data.get("excerpt") or (data.get("text") or "")[:300]
+
+    return DocumentPayload(
+        id=record.id,
+        filename=data.get("filename") or "document",
+        content_type=data.get("content_type"),
+        size=int(data.get("size") or 0),
+        created_at=record.created_at,
+        excerpt=excerpt,
+        scope=scope,
+        owner_company_id=record.company_id,
+    )
 
 
 def _extract_text(filename: str, content_type: str, raw_bytes: bytes) -> str:

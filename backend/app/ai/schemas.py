@@ -33,6 +33,10 @@ class DocumentPayload(BaseModel):
     owner_company_id: str | None = None
 
 
+class DocumentScopeUpdate(BaseModel):
+    scope: Literal["company", "global"]
+
+
 class AiMemoryCreate(BaseModel):
     company_id: str
     data: dict
