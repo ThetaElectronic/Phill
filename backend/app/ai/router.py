@@ -45,7 +45,7 @@ def chat(
         documents = _load_documents(document_ids, current_user, session)
         document_sections = []
         for doc in documents:
-            text = doc["text"] or ""
+            text = doc.get("text") or doc.get("excerpt") or ""
             filename = doc.get("filename") or "document"
             document_sections.append(f"Document: {filename}\n{text}")
         prompt = "Use the provided documents to answer.\n\n" + "\n\n".join(document_sections) + f"\n\nUser question: {request.prompt}"
@@ -96,7 +96,9 @@ async def upload_document(
         raise HTTPException(status_code=413, detail=f"File too large (max {max_size} bytes)")
 
     text = _extract_text(file.filename or "", file.content_type or "", raw_bytes)
-    excerpt = text[:5000]
+    max_text = int(settings.ai_document_max_text or 20_000)
+    trimmed_text = (text or "").strip()[:max_text]
+    excerpt = trimmed_text[:300]
 
     memory = AiMemoryCreate(
         company_id=current_user.company_id,
@@ -105,7 +107,8 @@ async def upload_document(
             "filename": file.filename,
             "content_type": file.content_type,
             "size": len(raw_bytes),
-            "text": excerpt,
+            "text": trimmed_text,
+            "excerpt": excerpt,
         },
     )
     record = _store_memory(memory, session)
@@ -138,7 +141,7 @@ def list_documents(
         data: dict[str, Any] = record.data or {}
         if data.get("type") != "document":
             continue
-        excerpt = (data.get("text") or "")[:300]
+        excerpt = data.get("excerpt") or (data.get("text") or "")[:300]
         documents.append(
             DocumentPayload(
                 id=record.id,
