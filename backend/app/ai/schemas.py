@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -8,10 +10,27 @@ class ChatRequest(BaseModel):
     system: str | None = None
     company_id: str | None = None
     user_id: str | None = None
+    persist: bool = False
+    memory_scope: Literal["personal", "company"] = "personal"
+    document_ids: list[str] = Field(default_factory=list)
 
 
 class ChatResponse(BaseModel):
-    output: dict
+    reply: str
+    model: str | None = None
+    id: str | None = None
+    usage: dict | None = None
+
+
+class DocumentPayload(BaseModel):
+    id: str
+    filename: str
+    content_type: str | None = None
+    size: int
+    created_at: datetime
+    excerpt: str | None = None
+    scope: Literal["company", "global"] = "company"
+    owner_company_id: str | None = None
 
 
 class AiMemoryCreate(BaseModel):
