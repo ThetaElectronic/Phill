@@ -2,6 +2,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Ensure local scripts (e.g., bootstrap helpers) can import the app package when
+# executed inside the container via `docker compose exec`.
+ENV PYTHONPATH=/app
+
 # Install system packages
 RUN apt-get update && apt-get install -y \
     build-essential \
