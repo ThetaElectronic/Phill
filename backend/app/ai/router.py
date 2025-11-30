@@ -175,7 +175,7 @@ def delete_document(
 
 
 def _store_memory(payload: AiMemoryCreate, session: Session) -> AiMemory:
-    memory = AiMemory(**payload.model_dump())
+    memory = AiMemory(**payload.model_dump(exclude_none=True))
     session.add(memory)
     session.commit()
     session.refresh(memory)
