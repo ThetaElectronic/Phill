@@ -36,7 +36,6 @@ class Settings(BaseSettings):
     ai_model: str = Field("gpt-5.1", alias="AI_MODEL")
     ai_document_max_bytes: int | None = Field(None, alias="AI_DOCUMENT_MAX_BYTES")
     ai_document_max_text: int | None = Field(None, alias="AI_DOCUMENT_MAX_TEXT")
-    ai_max_documents: int = Field(5, alias="AI_MAX_DOCUMENTS")
 
     cors_origins: list[str] = Field(default_factory=list, alias="CORS_ORIGINS")
     csp_directives: str | None = Field(None, alias="CSP_DIRECTIVES")

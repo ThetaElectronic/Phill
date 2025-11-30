@@ -1,7 +1,7 @@
 import io
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pypdf import PdfReader
 from sqlmodel import Session, select
 
@@ -45,10 +45,6 @@ def chat(
             seen.add(doc_id)
             document_ids.append(doc_id)
 
-        max_docs = max(1, settings.ai_max_documents or 5)
-        if len(document_ids) > max_docs:
-            raise HTTPException(status_code=400, detail=f"Too many documents (max {max_docs})")
-
         documents = _load_documents(document_ids, current_user, session)
         document_sections = []
         for doc in documents:
@@ -77,7 +73,14 @@ def chat(
     if memory_company and request.persist:
         memory = AiMemoryCreate(
             company_id=memory_company,
-            data={"prompt": request.prompt, "output": safe_output, "user_id": current_user.id, "model": raw_output.get("model")},
+            data={
+                "type": "chat",
+                "scope": request.memory_scope or "personal",
+                "prompt": request.prompt,
+                "output": safe_output,
+                "user_id": current_user.id,
+                "model": raw_output.get("model"),
+            },
         )
         store_memory(memory, session)
 
@@ -87,11 +90,16 @@ def chat(
 @router.post("/documents", response_model=DocumentPayload)
 async def upload_document(
     file: UploadFile = File(...),
+    scope: str = Form("company"),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ) -> DocumentPayload:
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User is not linked to a company")
+
+    scope = (scope or "company").lower().strip()
+    if scope not in {"company", "global"}:
+        raise HTTPException(status_code=400, detail="Invalid scope")
 
     settings = get_settings()
     raw_bytes = await file.read()
@@ -111,6 +119,7 @@ async def upload_document(
         company_id=current_user.company_id,
         data={
             "type": "document",
+            "scope": scope,
             "filename": file.filename,
             "content_type": file.content_type,
             "size": len(raw_bytes),
@@ -127,6 +136,8 @@ async def upload_document(
         size=len(raw_bytes),
         created_at=record.created_at,
         excerpt=excerpt[:300],
+        scope=scope,
+        owner_company_id=current_user.company_id,
     )
 
 
@@ -138,15 +149,14 @@ def list_documents(
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User is not linked to a company")
 
-    records = session.exec(
-        select(AiMemory)
-        .where(AiMemory.company_id == current_user.company_id)
-        .order_by(AiMemory.created_at.desc())
-    ).all()
+    records = session.exec(select(AiMemory).order_by(AiMemory.created_at.desc())).all()
     documents: list[DocumentPayload] = []
     for record in records:
         data: dict[str, Any] = record.data or {}
         if data.get("type") != "document":
+            continue
+        scope = data.get("scope") or "company"
+        if record.company_id != current_user.company_id and scope != "global":
             continue
         excerpt = data.get("excerpt") or (data.get("text") or "")[:300]
         documents.append(
@@ -157,6 +167,8 @@ def list_documents(
                 size=int(data.get("size") or 0),
                 created_at=record.created_at,
                 excerpt=excerpt,
+                scope=scope,
+                owner_company_id=record.company_id,
             )
         )
 
@@ -216,12 +228,13 @@ def _load_documents(ids: list[str], current_user: User, session: Session) -> lis
         record = session.get(AiMemory, doc_id)
         if not record:
             raise HTTPException(status_code=404, detail="Document not found")
-        if record.company_id != current_user.company_id:
-            raise HTTPException(status_code=403, detail="Cannot use another company's documents")
 
         data: dict[str, Any] = record.data or {}
         if data.get("type") != "document":
             raise HTTPException(status_code=400, detail="Referenced record is not a document")
+        scope = data.get("scope") or "company"
+        if record.company_id != current_user.company_id and scope != "global":
+            raise HTTPException(status_code=403, detail="Cannot use another company's documents")
 
         documents.append(data)
 

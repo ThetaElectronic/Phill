@@ -20,6 +20,7 @@ export default function AiClient({ session }) {
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
   const [docStatus, setDocStatus] = useState({ state: "idle" });
+  const [docScope, setDocScope] = useState("company");
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -71,7 +72,12 @@ export default function AiClient({ session }) {
       const res = await fetchWithAuth("/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: input, persist: useMemory, document_ids: selectedDocs }),
+        body: JSON.stringify({
+          prompt: input,
+          persist: useMemory,
+          memory_scope: "personal",
+          document_ids: selectedDocs,
+        }),
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
@@ -105,6 +111,7 @@ export default function AiClient({ session }) {
     setUploadStatus({ state: "loading", message: `Uploading ${file.name}` });
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("scope", docScope);
 
     try {
       const res = await fetchWithAuth(
@@ -131,12 +138,6 @@ export default function AiClient({ session }) {
     setDocStatus((prev) => (prev.state === "error" || prev.state === "success" ? { state: "idle" } : prev));
     setSelectedDocs((prev) => {
       if (prev.includes(id)) return prev.filter((docId) => docId !== id);
-
-      if (prev.length >= maxDocuments) {
-        setDocStatus({ state: "error", message: `Attach up to ${maxDocuments} documents per request.` });
-        return prev;
-      }
-
       return [...prev, id];
     });
   };
@@ -171,7 +172,8 @@ export default function AiClient({ session }) {
           </div>
           <h1 style={{ margin: 0 }}>Phill AI</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Calls <code>{chatUrl}</code> with your bearer token. Toggle memory to persist company-scoped chat history.
+            Calls <code>{chatUrl}</code> with your bearer token. Toggle memory to keep a personal trail that helps tune your
+            assistant's personality.
           </p>
           {aiStatus?.ok === false && (
             <div className="status-error" style={{ maxWidth: "720px" }}>
@@ -208,6 +210,29 @@ export default function AiClient({ session }) {
                   </button>
                   <span className="tiny muted">Max size enforced by server</span>
                 </div>
+                <div className="chip-row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
+                  <label className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
+                    <input
+                      type="radio"
+                      name="doc-scope"
+                      value="company"
+                      checked={docScope === "company"}
+                      onChange={(event) => setDocScope(event.target.value)}
+                    />
+                    <span className="tiny muted">Keep training scoped to my company</span>
+                  </label>
+                  <label className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
+                    <input
+                      type="radio"
+                      name="doc-scope"
+                      value="global"
+                      checked={docScope === "global"}
+                      onChange={(event) => setDocScope(event.target.value)}
+                    />
+                    <span className="tiny muted">Share for full AI training</span>
+                  </label>
+                </div>
+                <div className="tiny muted">Global training files are available to every tenant; company scope keeps them private.</div>
               </div>
               {uploadStatus.state === "loading" && <div className="tiny muted">{uploadStatus.message}</div>}
               {uploadStatus.state === "error" && <div className="status-error">{uploadStatus.message}</div>}
@@ -215,7 +240,7 @@ export default function AiClient({ session }) {
             </div>
 
             <div className="stack" style={{ gap: "0.35rem" }}>
-              <span className="tiny muted">Attach documents to ground the reply (up to {maxDocuments})</span>
+              <span className="tiny muted">Attach any uploaded documents to ground the next reply.</span>
               <div className="stack" style={{ gap: "0.35rem", maxHeight: "180px", overflow: "auto" }}>
                 {documents.length === 0 && <div className="muted tiny">No documents uploaded yet</div>}
                 {documents.map((doc) => (
@@ -238,6 +263,14 @@ export default function AiClient({ session }) {
                       </div>
                     </label>
                     <div className="chip-row" style={{ justifyContent: "space-between", gap: "0.35rem" }}>
+                      <div className="badge-list tiny muted" style={{ gap: "0.35rem" }}>
+                        <span className={doc.scope === "global" ? "pill pill-outline" : "pill"}>
+                          {doc.scope === "global" ? "Global training" : "Company scoped"}
+                        </span>
+                        {doc.owner_company_id && doc.scope === "global" && (
+                          <span className="pill pill-outline">Owner: {doc.owner_company_id.slice(0, 8)}…</span>
+                        )}
+                      </div>
                       <span className="tiny muted">Uploaded {new Date(doc.created_at).toLocaleString()}</span>
                       <button type="button" className="secondary" onClick={() => removeDocument(doc)}>
                         Remove
@@ -264,7 +297,7 @@ export default function AiClient({ session }) {
             <div className="stack" style={{ gap: "0.5rem" }}>
               <label className="chip-row" style={{ gap: "0.35rem" }}>
                 <input type="checkbox" checked={useMemory} onChange={(e) => setUseMemory(e.target.checked)} />
-                <span className="tiny muted">Persist to company memory</span>
+                <span className="tiny muted">Save this chat to my personal AI memory</span>
               </label>
               <button type="button" onClick={sendMessage} disabled={status.state === "loading" || aiStatus?.ok === false}>
                 {status.state === "loading" ? "Sending…" : "Send"}

@@ -97,16 +97,18 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   ```
 
 ### AI chat with document grounding
-- Upload PDFs or text files on the `/ai` page to ground the next reply. Uploaded documents stay scoped to your company and the extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed. Attach up to 5 documents per request by default (configure with `AI_MAX_DOCUMENTS` on the backend and, if desired, `NEXT_PUBLIC_AI_MAX_DOCUMENTS` for the UI hint).
-- Select one or more documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material. The UI prevents selecting more than the configured max.
-- Remove a document at any time from the `/ai` page or via the API; deletions are immediate and scoped to your company.
+- Upload PDFs or text files on the `/ai` page to ground the next reply. Choose whether each upload is **company scoped** (default) or shared for **global training** across all tenants. Extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed.
+- Select any number of documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material. Global training files are usable by every company, while company-scoped uploads remain private to their owner.
+- Toggle memory to save the chat under your personal AI profile (tagged to your user and company) so future personality tuning has more examples. Leave it off for ephemeral questions.
+- Remove a document you uploaded at any time from the `/ai` page or via the API; deletions are immediate and limited to the owner company.
 - API examples:
 
   ```bash
   # Upload a PDF or text file
   curl -X POST "$NEXT_BACKEND_URL/api/ai/documents" \
     -H "Authorization: Bearer <token>" \
-    -F "file=@/path/to/guide.pdf"
+    -F "file=@/path/to/guide.pdf" \
+    -F "scope=company" # or scope=global
 
   # Chat with a document attached (replace <doc_id> from the upload response)
   curl -X POST "$NEXT_BACKEND_URL/api/ai/chat" \
@@ -206,7 +208,7 @@ cp .env.example .env
 3) Edit `.env` for production:
 - Set `API_HOST=https://app.jarvis-fuel.com` and `FRONTEND_URL=https://app.jarvis-fuel.com`.
 - Keep `NEXT_PUBLIC_API_URL=/api` and `NEXT_BACKEND_URL=http://backend:8001` so the frontend proxies through Nginx to the backend container.
-- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes), trim stored document text with `AI_DOCUMENT_MAX_TEXT` (defaults to 20000 characters), and limit per-request attachments with `AI_MAX_DOCUMENTS` (defaults to 5). If you change `AI_MAX_DOCUMENTS`, mirror it in `NEXT_PUBLIC_AI_MAX_DOCUMENTS` for the frontend hint. SMTP supports `SMTP_STARTTLS` (default true) and `SMTP_USE_TLS` (implicit TLS, default false) for providers that require a specific mode.
+- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes) and trim stored document text with `AI_DOCUMENT_MAX_TEXT` (defaults to 20000 characters). SMTP supports `SMTP_STARTTLS` (default true) and `SMTP_USE_TLS` (implicit TLS, default false) for providers that require a specific mode.
 
 ### AI and SMTP readiness checks
 - `/api/ai/status` reports whether `OPENAI_API_KEY` and `AI_MODEL` are set so the AI UI can guide users before sending requests.
