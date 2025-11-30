@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth, apiUrl } from "../../lib/api";
@@ -19,6 +19,7 @@ export default function AiClient({ session }) {
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
   const [docStatus, setDocStatus] = useState({ state: "idle" });
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setStatus((prev) => (prev.state === "idle" ? prev : prev));
@@ -155,17 +156,26 @@ export default function AiClient({ session }) {
         <div className="card stack" style={{ gap: "1rem" }}>
           <div className="grid two-col" style={{ gap: "0.75rem" }}>
             <div className="stack" style={{ gap: "0.35rem" }}>
-              <label className="stack" style={{ gap: "0.25rem" }}>
+              <div className="stack" style={{ gap: "0.25rem" }}>
                 <span>Upload a document (PDF or text)</span>
-                <input
-                  type="file"
-                  accept=".pdf,text/plain,.txt,.md,.markdown"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) uploadDocument(file);
-                  }}
-                />
-              </label>
+                <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center" }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,text/plain,.txt,.md,.markdown"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) uploadDocument(file);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    style={{ display: "none" }}
+                  />
+                  <button type="button" className="secondary" onClick={() => fileInputRef.current?.click()}>
+                    Choose file
+                  </button>
+                  <span className="tiny muted">Max size enforced by server</span>
+                </div>
+              </div>
               {uploadStatus.state === "loading" && <div className="tiny muted">{uploadStatus.message}</div>}
               {uploadStatus.state === "error" && <div className="status-error">{uploadStatus.message}</div>}
               {uploadStatus.state === "success" && <div className="status-success">{uploadStatus.message}</div>}

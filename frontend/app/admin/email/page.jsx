@@ -46,7 +46,7 @@ export default function AdminEmailPage() {
 
   return (
     <AuthWall title="Email admin" description="Send a test message using the configured SMTP credentials.">
-      <section className="stack" style={{ gap: "0.85rem", maxWidth: "640px" }}>
+      <section className="stack" style={{ gap: "1rem", maxWidth: "720px" }}>
         <div className="stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
             <span className="pill">Admin</span>

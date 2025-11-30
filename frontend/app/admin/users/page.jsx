@@ -149,7 +149,7 @@ export default function AdminUsersPage() {
 
   return (
     <AuthWall title="Admin users" description="Manage team accounts within your tenant.">
-      <section className="stack" style={{ gap: "1rem", maxWidth: "960px" }}>
+      <section className="stack" style={{ gap: "1rem", maxWidth: "1080px" }}>
         <div className="stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
             <span className="pill">Admin</span>
@@ -161,7 +161,7 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        <div className="grid two-col" style={{ gap: "1rem" }}>
+        <div className="grid two-col" style={{ gap: "1rem", alignItems: "start" }}>
           <form className="card glass stack" style={{ gap: "0.75rem" }} onSubmit={handleSubmit}>
             <div className="stack" style={{ gap: "0.25rem" }}>
               <h2 style={{ margin: 0 }}>Create user</h2>
@@ -238,8 +238,8 @@ export default function AdminUsersPage() {
                 <div className="tiny muted">No users found for your scope.</div>
               )}
               {users.map((user) => (
-                <div key={user.id} className="card glass stack" style={{ gap: "0.35rem" }}>
-                  <div className="badge-list" style={{ gap: "0.35rem" }}>
+                <div key={user.id} className="card glass stack" style={{ gap: "0.45rem" }}>
+                  <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
                     <span className="pill">{user.role}</span>
                     <span className="pill pill-outline">{user.email}</span>
                   </div>
@@ -258,10 +258,10 @@ export default function AdminUsersPage() {
                         autoComplete="new-password"
                       />
                     </label>
-                    <div className="badge-list" style={{ gap: "0.35rem", justifyContent: "space-between" }}>
+                    <div className="chip-row" style={{ gap: "0.35rem", justifyContent: "space-between" }}>
                       <button
                         type="button"
-                        className="pill pill-outline"
+                        className="secondary"
                         onClick={() => handleSetPassword(user.id)}
                         disabled={!passwords[user.id]?.trim() || passwordStatus[user.id]?.state === "saving"}
                       >
