@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     env: str = Field("development", alias="ENV")
+    app_version: str = Field("dev", alias="APP_VERSION")
     api_host: str = Field("http://localhost:8001", alias="API_HOST")
     frontend_url: str = Field("http://localhost:3000", alias="FRONTEND_URL")
 
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = Field(None, alias="OPENAI_API_KEY")
     ai_model: str = Field("gpt-5.1", alias="AI_MODEL")
+    ai_document_max_bytes: int | None = Field(None, alias="AI_DOCUMENT_MAX_BYTES")
 
     cors_origins: list[str] = Field(default_factory=list, alias="CORS_ORIGINS")
     csp_directives: str | None = Field(None, alias="CSP_DIRECTIVES")
