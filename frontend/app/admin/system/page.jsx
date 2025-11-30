@@ -132,6 +132,12 @@ export default function AdminSystemPage() {
           <p className="muted" style={{ margin: 0 }}>
             Health, SMTP, and AI readiness for this deployment. Metrics mirror the backend status endpoint.
           </p>
+          <div className="chip-row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+            <a className="chip secondary" href="/admin/diagnostics">
+              Open diagnostics
+            </a>
+            <span className="tiny muted">Detailed payloads and endpoints live there.</span>
+          </div>
         </div>
 
         <div className="chip-row" style={{ alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>

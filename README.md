@@ -96,6 +96,9 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   curl -H "Authorization: Bearer <token>" $NEXT_BACKEND_URL/api/admin/status | jq
   ```
 
+### Admin diagnostics (advanced)
+- Visit `/admin/diagnostics` for the detailed payloads and endpoints that would clutter the user-facing UI. The page pulls the raw responses from `/api/admin/status` and `/ai/status`, shows endpoint URLs for quick copy/paste, and renders the JSON payloads for debugging.
+
 ### AI chat with document grounding
 - Upload PDFs or text files on the `/ai` page to ground the next reply. Choose whether each upload is **company scoped** (default) or shared for **global training** across all tenants, and adjust the scope later from the document list if needed. Extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed.
 - Admins can audit training uploads at `/admin/documents`, see size/type metadata, flip scopes between company/global, or remove outdated files without leaving the panel.
