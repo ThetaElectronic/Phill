@@ -20,10 +20,11 @@ def bootstrap_admin(
     username: str | None,
     password: str,
     display_name: str | None = None,
-) -> str:
-    """Create an admin account if it does not exist and ensure the company is present.
+    update_if_exists: bool = False,
+) -> tuple[str, str]:
+    """Create or update an admin account and ensure the company is present.
 
-    Returns the created or existing admin email for logging.
+    Returns (email, action) where action is "created", "updated", or "exists".
     """
 
     with Session(engine) as session:
@@ -34,7 +35,17 @@ def bootstrap_admin(
 
         user = session.exec(select(User).where(User.email == email)).first()
         if user:
-            return user.email
+            if update_if_exists:
+                user.company_id = company.id
+                user.username = username or user.username or email
+                user.name = display_name or user.name or username or email
+                user.role = ROLE_ADMIN
+                user.password_hash = hash_password(password)
+                session.add(user)
+                session.commit()
+                return user.email, "updated"
+
+            return user.email, "exists"
 
         admin = User(
             id=str(uuid4()),
@@ -47,7 +58,7 @@ def bootstrap_admin(
         )
         session.add(admin)
         session.commit()
-        return admin.email
+        return admin.email, "created"
 
 
 def main() -> None:
@@ -58,18 +69,25 @@ def main() -> None:
     parser.add_argument("--username", help="Admin username (defaults to the email)")
     parser.add_argument("--password", required=True, help="Admin password")
     parser.add_argument("--name", help="Display name (defaults to username)")
+    parser.add_argument(
+        "--update",
+        action="store_true",
+        help="Update the password/name if the admin already exists",
+    )
 
     args = parser.parse_args()
 
-    email = bootstrap_admin(
+    email, action = bootstrap_admin(
         company_name=args.company,
         company_domain=args.domain,
         email=args.email,
         username=args.username,
         password=args.password,
         display_name=args.name,
+        update_if_exists=args.update,
     )
-    print(f"Admin ready: {email}")
+    verb = "updated" if action == "updated" else "ready"
+    print(f"Admin {verb}: {email}")
 
 
 if __name__ == "__main__":
