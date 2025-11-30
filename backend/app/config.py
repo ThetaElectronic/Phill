@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     env: str = Field("development", alias="ENV")
+    app_version: str = Field("dev", alias="APP_VERSION")
     api_host: str = Field("http://localhost:8001", alias="API_HOST")
     frontend_url: str = Field("http://localhost:3000", alias="FRONTEND_URL")
 
@@ -22,6 +23,8 @@ class Settings(BaseSettings):
     smtp_user: str | None = Field(None, alias="SMTP_USER")
     smtp_pass: str | None = Field(None, alias="SMTP_PASS")
     smtp_from: str | None = Field(None, alias="SMTP_FROM")
+    smtp_starttls: bool = Field(True, alias="SMTP_STARTTLS")
+    smtp_use_tls: bool = Field(False, alias="SMTP_USE_TLS")
 
     s3_enabled: bool = Field(False, alias="S3_ENABLED")
     s3_bucket: str | None = Field(None, alias="S3_BUCKET")
@@ -31,6 +34,9 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = Field(None, alias="OPENAI_API_KEY")
     ai_model: str = Field("gpt-5.1", alias="AI_MODEL")
+    ai_document_max_bytes: int | None = Field(None, alias="AI_DOCUMENT_MAX_BYTES")
+    ai_document_max_text: int | None = Field(None, alias="AI_DOCUMENT_MAX_TEXT")
+    ai_max_documents: int = Field(5, alias="AI_MAX_DOCUMENTS")
 
     cors_origins: list[str] = Field(default_factory=list, alias="CORS_ORIGINS")
     csp_directives: str | None = Field(None, alias="CSP_DIRECTIVES")
