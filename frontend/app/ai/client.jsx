@@ -17,6 +17,7 @@ export default function AiClient({ session }) {
   const [meta, setMeta] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [selectedDocs, setSelectedDocs] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
   const [docStatus, setDocStatus] = useState({ state: "idle" });
   const [docScope, setDocScope] = useState("company");
@@ -39,21 +40,30 @@ export default function AiClient({ session }) {
     };
 
     loadAiStatus();
-
-    const loadDocuments = async () => {
-      if (!tokens) return;
-      try {
-        const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
-        if (!res.ok) return;
-        const data = await res.json();
-        setDocuments(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("Unable to load documents", error);
-      }
-    };
-
     loadDocuments();
   }, [tokens]);
+
+  const loadDocuments = async () => {
+    if (!tokens) return;
+    setDocumentsLoading(true);
+    setDocStatus((prev) => (prev.state === "loading" ? prev : { state: "idle" }));
+    try {
+      const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
+      if (!res.ok) {
+        const detail = await res.text();
+        setDocStatus({ state: "error", message: detail || "Unable to load documents" });
+        return;
+      }
+      const data = await res.json();
+      setDocuments(Array.isArray(data) ? data : []);
+      setDocStatus({ state: "idle" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load documents";
+      setDocStatus({ state: "error", message });
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
 
   const sendMessage = async () => {
     if (!tokens) {
@@ -99,6 +109,13 @@ export default function AiClient({ session }) {
     } catch (error) {
       setStatus({ state: "error", message: error instanceof Error ? error.message : "Unable to chat" });
     }
+  };
+
+  const resetConversation = () => {
+    setMessages([]);
+    setMeta(null);
+    setInput("");
+    setStatus({ state: "idle" });
   };
 
   const uploadDocument = async (file) => {
@@ -210,26 +227,36 @@ export default function AiClient({ session }) {
                 <span className="pill pill-outline">Upload</span>
               </div>
               <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
-                <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
-                  <input
-                    type="radio"
-                    name="doc-scope"
-                    value="company"
-                    checked={docScope === "company"}
-                    onChange={(event) => setDocScope(event.target.value)}
-                  />
-                  <span className="tiny muted">Company</span>
-                </label>
-                <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
-                  <input
-                    type="radio"
-                    name="doc-scope"
-                    value="global"
-                    checked={docScope === "global"}
-                    onChange={(event) => setDocScope(event.target.value)}
-                  />
-                  <span className="tiny muted">Global</span>
-                </label>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={loadDocuments}
+                  disabled={documentsLoading || docStatus.state === "loading"}
+                >
+                  {documentsLoading ? "Refreshing…" : "Refresh"}
+                </button>
+                <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
+                  <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
+                    <input
+                      type="radio"
+                      name="doc-scope"
+                      value="company"
+                      checked={docScope === "company"}
+                      onChange={(event) => setDocScope(event.target.value)}
+                    />
+                    <span className="tiny muted">Company</span>
+                  </label>
+                  <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
+                    <input
+                      type="radio"
+                      name="doc-scope"
+                      value="global"
+                      checked={docScope === "global"}
+                      onChange={(event) => setDocScope(event.target.value)}
+                    />
+                    <span className="tiny muted">Global</span>
+                  </label>
+                </div>
               </div>
             </header>
             <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
@@ -260,7 +287,8 @@ export default function AiClient({ session }) {
             {uploadStatus.state === "success" && <div className="status-success">{uploadStatus.message}</div>}
 
             <div className="stack" style={{ gap: "0.35rem", maxHeight: "220px", overflow: "auto" }}>
-              {documents.length === 0 && <div className="muted tiny">No documents uploaded yet</div>}
+              {documentsLoading && <div className="muted tiny">Loading documents…</div>}
+              {!documentsLoading && documents.length === 0 && <div className="muted tiny">No documents uploaded yet</div>}
               {documents.map((doc) => (
                 <div key={doc.id} className="stack surface" style={{ gap: "0.35rem", padding: "0.5rem" }}>
                   <label className="chip-row" style={{ gap: "0.4rem", alignItems: "start" }}>
@@ -303,16 +331,23 @@ export default function AiClient({ session }) {
           </div>
 
           <div className="card surface stack" style={{ gap: "0.75rem" }}>
-            <div className="stack" style={{ gap: "0.2rem" }}>
-              <div className="badge-list">
-                <span className="pill">Chat</span>
-                <span className="pill pill-outline">Memory toggle</span>
+            <header className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+              <div className="stack" style={{ gap: "0.2rem" }}>
+                <div className="badge-list">
+                  <span className="pill">Chat</span>
+                  <span className="pill pill-outline">Memory toggle</span>
+                </div>
+                <p className="muted tiny" style={{ margin: 0 }}>
+                  Craft a prompt, attach any uploaded documents, and decide if this exchange should shape your personal
+                  assistant memory.
+                </p>
               </div>
-              <p className="muted tiny" style={{ margin: 0 }}>
-                Craft a prompt, attach any uploaded documents, and decide if this exchange should shape your personal
-                assistant memory.
-              </p>
-            </div>
+              {messages.length > 0 && (
+                <button type="button" className="ghost" onClick={resetConversation} disabled={status.state === "loading"}>
+                  Clear conversation
+                </button>
+              )}
+            </header>
             <label className="stack" style={{ gap: "0.35rem" }}>
               <span>Prompt</span>
               <textarea
