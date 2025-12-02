@@ -58,6 +58,7 @@ export default function AdminDiagnosticsPage() {
   const [aiStatus, setAiStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
 
   const endpoints = useMemo(
     () => ({
@@ -100,6 +101,17 @@ export default function AdminDiagnosticsPage() {
     load();
   }, []);
 
+  const copyText = async (label, value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyMessage(`${label} copied`);
+      setTimeout(() => setCopyMessage(""), 1800);
+    } catch (err) {
+      setCopyMessage("Unable to copy");
+      setTimeout(() => setCopyMessage(""), 1800);
+    }
+  };
+
   const envLabel = adminStatus?.environment || "unknown";
   const versionLabel = adminStatus?.version || "dev";
   const overallOk = adminStatus?.status === "ok";
@@ -131,6 +143,7 @@ export default function AdminDiagnosticsPage() {
             )}
             <span className="pill pill-outline">Env: {envLabel}</span>
             <span className="pill pill-outline">Version: {versionLabel}</span>
+            {copyMessage && <span className="tiny muted">{copyMessage}</span>}
           </div>
           {error && <div className="status-error">{error}</div>}
           {!error && !loading && hasAdminData && !overallOk && (
@@ -140,7 +153,8 @@ export default function AdminDiagnosticsPage() {
 
         <DetailCard title="Health checks" description="Raw admin status, including database, email, and AI readiness.">
           {loading && <div className="status-info">Loading…</div>}
-          {!loading && <StatusList status={adminStatus} />}
+          {!loading && hasAdminData && <StatusList status={adminStatus} />}
+          {!loading && !hasAdminData && <div className="muted tiny">No admin payload loaded yet.</div>}
           {adminStatus?.checked_at && (
             <span className="tiny muted">Checked at {new Date(adminStatus.checked_at).toLocaleString()}</span>
           )}
@@ -157,11 +171,24 @@ export default function AdminDiagnosticsPage() {
                 {aiStatus.detail && <span className="tiny muted">{aiStatus.detail}</span>}
                 {aiStatus.model && <span className="pill pill-soft">Model: {aiStatus.model}</span>}
               </div>
-              <pre className="code-block" style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                {JSON.stringify(aiStatus, null, 2)}
-              </pre>
+              <div className="stack" style={{ gap: "0.35rem" }}>
+                <div className="chip-row" style={{ gap: "0.25rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => copyText("AI status", JSON.stringify(aiStatus, null, 2))}
+                  >
+                    Copy AI status
+                  </button>
+                  <span className="tiny muted">Use this when sharing logs with support.</span>
+                </div>
+                <pre className="code-block" style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                  {JSON.stringify(aiStatus, null, 2)}
+                </pre>
+              </div>
             </div>
           )}
+          {!loading && !aiStatus && <div className="muted tiny">No AI status available.</div>}
         </DetailCard>
 
         {metrics && (
@@ -177,13 +204,32 @@ export default function AdminDiagnosticsPage() {
         )}
 
         <DetailCard title="API endpoints" description="Useful routes for testing login, AI, and uploads.">
-          <div className="grid two-col" style={{ gap: "0.5rem" }}>
-            {Object.entries(endpoints).map(([key, value]) => (
-              <div key={key} className="stack" style={{ gap: "0.15rem" }}>
-                <span className="tiny muted">{key}</span>
-                <code style={{ wordBreak: "break-all" }}>{value}</code>
-              </div>
-            ))}
+          <div className="stack" style={{ gap: "0.5rem" }}>
+            <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() =>
+                  copyText(
+                    "Endpoints",
+                    Object.entries(endpoints)
+                      .map(([key, value]) => `${key}: ${value}`)
+                      .join("\n"),
+                  )
+                }
+              >
+                Copy endpoint list
+              </button>
+              <span className="tiny muted">Share this with ops for quick checks.</span>
+            </div>
+            <div className="grid two-col" style={{ gap: "0.5rem" }}>
+              {Object.entries(endpoints).map(([key, value]) => (
+                <div key={key} className="stack" style={{ gap: "0.15rem" }}>
+                  <span className="tiny muted">{key}</span>
+                  <code style={{ wordBreak: "break-all" }}>{value}</code>
+                </div>
+              ))}
+            </div>
           </div>
         </DetailCard>
 
@@ -191,12 +237,34 @@ export default function AdminDiagnosticsPage() {
           <div className="grid two-col" style={{ gap: "0.75rem" }}>
             <div className="stack" style={{ gap: "0.25rem" }}>
               <span className="tiny muted">Admin status</span>
+              <div className="chip-row" style={{ gap: "0.25rem", alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => copyText("Admin status", JSON.stringify(adminStatus, null, 2))}
+                  disabled={!hasAdminData}
+                >
+                  Copy admin JSON
+                </button>
+                {!hasAdminData && <span className="tiny muted">Load status before copying.</span>}
+              </div>
               <pre className="code-block" style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                 {JSON.stringify(adminStatus, null, 2)}
               </pre>
             </div>
             <div className="stack" style={{ gap: "0.25rem" }}>
               <span className="tiny muted">AI status</span>
+              <div className="chip-row" style={{ gap: "0.25rem", alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => copyText("AI payload", JSON.stringify(aiStatus, null, 2))}
+                  disabled={!aiStatus}
+                >
+                  Copy AI JSON
+                </button>
+                {!aiStatus && <span className="tiny muted">Load status before copying.</span>}
+              </div>
               <pre className="code-block" style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                 {JSON.stringify(aiStatus, null, 2)}
               </pre>
