@@ -39,10 +39,6 @@ function RequestsCard({ title, description, items, loading, error }) {
                 {item.note && <div className="muted tiny">Note: {item.note}</div>}
                 <div className="muted tiny">{new Date(item.created_at).toLocaleString()}</div>
               </div>
-              <div className="stack" style={{ alignItems: "flex-end", gap: "0.1rem" }}>
-                {item.ip_address && <span className="pill pill-outline">IP {item.ip_address}</span>}
-                {item.user_agent && <span className="muted tiny truncate">{item.user_agent}</span>}
-              </div>
             </div>
           ))}
         </div>

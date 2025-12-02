@@ -188,55 +188,27 @@ export default function AiClient({ session }) {
   return (
     <AuthWall session={tokens} title="AI chat is protected" description="Sign in to use Phill AI with tenant-scoped memory.">
       <section className="stack" style={{ gap: "1.25rem" }}>
-        <div className="card glass stack" style={{ gap: "0.5rem" }}>
+        <div className="card glass stack" style={{ gap: "0.35rem" }}>
+          <div className="badge-list">
+            <span className="pill">Phill AI</span>
+            <span className="pill pill-outline">Workspace chat</span>
+          </div>
           <div className="stack" style={{ gap: "0.15rem" }}>
-            <div className="badge-list">
-              <span className="pill">Phill AI</span>
-              <span className="pill pill-outline">Chat & training</span>
-            </div>
-            <h1 style={{ margin: 0 }}>Chat with your workspace</h1>
+            <h1 style={{ margin: 0 }}>Chat and training files</h1>
             <p className="muted" style={{ margin: 0 }}>
-              Upload training files, pick what to ground, and optionally save the exchange to your personal memory.
+              Keep uploads tidy, choose scope, attach what you need, and save responses to your personal memory when helpful.
             </p>
           </div>
-          {!aiReady && (
-            <div className="status-error">AI is not ready yet. Check credentials in diagnostics.</div>
-          )}
+          {!aiReady && <div className="status-error">AI is not ready yet. Check credentials in diagnostics.</div>}
         </div>
 
         <div className="grid two-col" style={{ gap: "1rem" }}>
           <div className="card surface stack" style={{ gap: "0.75rem" }}>
-            <div className="stack" style={{ gap: "0.25rem" }}>
-              <div className="badge-list">
+            <header className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+              <div className="badge-list" style={{ gap: "0.35rem" }}>
                 <span className="pill">Training files</span>
-                <span className="pill pill-outline">Upload & scope</span>
+                <span className="pill pill-outline">Upload</span>
               </div>
-              <p className="muted tiny" style={{ margin: 0 }}>
-                Keep a clean library: upload, choose scope, attach, or remove. Everything stays scoped to your tenant unless
-                you flip it to global training.
-              </p>
-            </div>
-            <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,text/plain,.txt,.md,.markdown"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) uploadDocument(file);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-                style={{ display: "none" }}
-                disabled={!aiReady}
-              />
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!aiReady}
-              >
-                Upload file
-              </button>
               <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
                 <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
                   <input
@@ -259,6 +231,29 @@ export default function AiClient({ session }) {
                   <span className="tiny muted">Global</span>
                 </label>
               </div>
+            </header>
+            <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,text/plain,.txt,.md,.markdown"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) uploadDocument(file);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                style={{ display: "none" }}
+                disabled={!aiReady}
+              />
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!aiReady}
+              >
+                Upload file
+              </button>
+              <span className="tiny muted">PDF or text — scope is set per upload.</span>
             </div>
             {uploadStatus.state === "loading" && <div className="tiny muted">{uploadStatus.message}</div>}
             {uploadStatus.state === "error" && <div className="status-error">{uploadStatus.message}</div>}
@@ -267,7 +262,7 @@ export default function AiClient({ session }) {
             <div className="stack" style={{ gap: "0.35rem", maxHeight: "220px", overflow: "auto" }}>
               {documents.length === 0 && <div className="muted tiny">No documents uploaded yet</div>}
               {documents.map((doc) => (
-                <div key={doc.id} className="stack surface" style={{ gap: "0.35rem", padding: "0.55rem" }}>
+                <div key={doc.id} className="stack surface" style={{ gap: "0.35rem", padding: "0.5rem" }}>
                   <label className="chip-row" style={{ gap: "0.4rem", alignItems: "start" }}>
                     <input
                       type="checkbox"
@@ -276,22 +271,15 @@ export default function AiClient({ session }) {
                     />
                     <div className="stack" style={{ gap: "0.1rem" }}>
                       <strong className="tiny">{doc.filename || "Document"}</strong>
-                      <span className="tiny muted">
-                        {doc.size ? `${Math.round(doc.size / 1024)} KB` : ""}
-                        {doc.size ? " • " : ""}
-                        {doc.excerpt || "No preview"}
-                      </span>
+                      <span className="tiny muted">{doc.excerpt || "No preview"}</span>
                     </div>
                   </label>
                   <div className="chip-row" style={{ justifyContent: "space-between", gap: "0.35rem", flexWrap: "wrap" }}>
                     <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
                       <span className={doc.scope === "global" ? "pill pill-outline" : "pill"}>
-                        {doc.scope === "global" ? "Global training" : "Company scoped"}
+                        {doc.scope === "global" ? "Global training" : "Company"}
                       </span>
-                      {doc.owner_company_id && doc.scope === "global" && (
-                        <span className="tiny muted">Owner {doc.owner_company_id.slice(0, 8)}…</span>
-                      )}
-                      <span className="tiny muted">{new Date(doc.created_at).toLocaleString()}</span>
+                      {doc.size && <span className="tiny muted">{Math.round(doc.size / 1024)} KB</span>}
                     </div>
                     <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap" }}>
                       <select

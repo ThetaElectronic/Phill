@@ -13,11 +13,10 @@ function StatusPill({ ok, label }) {
 function StatusCard({ title, description, status }) {
   const ok = status?.ok;
   const detail = status?.detail;
-  const meta = status?.model || status?.metrics;
 
   return (
-    <section className="card surface stack" style={{ gap: "0.65rem" }}>
-      <div className="stack" style={{ gap: "0.15rem" }}>
+    <section className="card surface stack" style={{ gap: "0.55rem" }}>
+      <div className="stack" style={{ gap: "0.1rem" }}>
         <div className="badge-list">
           <span className="pill">Admin</span>
           <span className="pill pill-outline">{title}</span>
@@ -27,20 +26,10 @@ function StatusCard({ title, description, status }) {
           {description}
         </p>
       </div>
-      <div className="stack" style={{ gap: "0.35rem" }}>
-        <StatusPill ok={ok} label={ok ? "Healthy" : "Check settings"} />
-        {meta && typeof meta === "object" && (
-          <div className="pill-row" style={{ gap: "0.25rem", flexWrap: "wrap" }}>
-            {Object.entries(meta).map(([key, value]) => (
-              <span key={key} className="pill pill-soft">
-                {key}: {value}
-              </span>
-            ))}
-          </div>
-        )}
-        {typeof meta === "string" && <div className="tiny muted">{meta}</div>}
-        {detail && <div className="status-error">{detail}</div>}
-        {!detail && !ok && <div className="status-info">Waiting for configuration.</div>}
+      <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+        <StatusPill ok={ok} label={ok ? "Healthy" : "Needs attention"} />
+        {detail && <span className="tiny muted">{detail}</span>}
+        {!detail && !ok && <span className="tiny muted">Waiting for configuration.</span>}
       </div>
     </section>
   );
@@ -130,14 +119,11 @@ export default function AdminSystemPage() {
           </div>
           <h1 style={{ margin: 0 }}>System checks</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Health, SMTP, and AI readiness for this deployment. Metrics mirror the backend status endpoint.
+            Simple health view for admins. Deep details live in diagnostics.
           </p>
-          <div className="chip-row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
-            <a className="chip secondary" href="/admin/diagnostics">
-              Open diagnostics
-            </a>
-            <span className="tiny muted">Detailed payloads and endpoints live there.</span>
-          </div>
+          <a className="chip secondary" href="/admin/diagnostics">
+            Diagnostics
+          </a>
         </div>
 
         <div className="chip-row" style={{ alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -155,23 +141,15 @@ export default function AdminSystemPage() {
         {error && <div className="status-error">{error}</div>}
 
         {!loading && !error && data && (
-          <section className="card glass stack" style={{ gap: "0.5rem" }}>
-            <div className="pill-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
-              <StatusPill
-                ok={overallHealthy}
-                label={overallHealthy ? "All systems healthy" : "Some checks need attention"}
-              />
-              <span className="pill pill-outline">Env: {environment}</span>
-              <span className="pill pill-outline">Version: {version}</span>
-              {lastUpdated && (
-                <span className="tiny muted">
-                  Checked {lastUpdated.toLocaleTimeString()} ({lastUpdated.toLocaleDateString()})
-                </span>
-              )}
-            </div>
-            <p className="muted small" style={{ margin: 0 }}>
-              Overall status is based on database connectivity, SMTP readiness, and AI configuration.
-            </p>
+          <section className="card glass chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+            <StatusPill ok={overallHealthy} label={overallHealthy ? "All systems healthy" : "Needs attention"} />
+            <span className="pill pill-outline">Env: {environment}</span>
+            <span className="pill pill-outline">Version: {version}</span>
+            {lastUpdated && (
+              <span className="tiny muted">
+                Checked {lastUpdated.toLocaleTimeString()} ({lastUpdated.toLocaleDateString()})
+              </span>
+            )}
           </section>
         )}
 
@@ -183,25 +161,7 @@ export default function AdminSystemPage() {
           </div>
         )}
 
-        {!loading && !error && data?.metrics && (
-          <section className="card surface stack" style={{ gap: "0.4rem" }}>
-            <div className="badge-list">
-              <span className="pill">Admin</span>
-              <span className="pill pill-outline">Metrics</span>
-            </div>
-            <h2 style={{ margin: 0 }}>Latency buckets</h2>
-            <p className="muted" style={{ margin: 0 }}>
-              Rounded API latency counts surfaced by the backend. Use this to spot spikes or cold starts.
-            </p>
-            <div className="pill-row" style={{ flexWrap: "wrap" }}>
-              {Object.entries(data.metrics).map(([bucket, count]) => (
-                <span key={bucket} className="pill pill-soft">
-                  {bucket}: {count}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Detailed metrics live in diagnostics now to reduce clutter */}
       </section>
     </AuthWall>
   );

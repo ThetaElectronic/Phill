@@ -104,6 +104,7 @@ export default function AdminDiagnosticsPage() {
   const versionLabel = adminStatus?.version || "dev";
   const overallOk = adminStatus?.status === "ok";
   const hasAdminData = Boolean(adminStatus);
+  const metrics = adminStatus?.metrics;
 
   return (
     <AuthWall title="Admin diagnostics are protected" description="Sign in with admin permissions to view deployment details.">
@@ -162,6 +163,18 @@ export default function AdminDiagnosticsPage() {
             </div>
           )}
         </DetailCard>
+
+        {metrics && (
+          <DetailCard title="Latency metrics" description="Bucketed API timings pulled from the admin status payload.">
+            <div className="pill-row" style={{ flexWrap: "wrap" }}>
+              {Object.entries(metrics).map(([bucket, count]) => (
+                <span key={bucket} className="pill pill-soft">
+                  {bucket}: {count}
+                </span>
+              ))}
+            </div>
+          </DetailCard>
+        )}
 
         <DetailCard title="API endpoints" description="Useful routes for testing login, AI, and uploads.">
           <div className="grid two-col" style={{ gap: "0.5rem" }}>
