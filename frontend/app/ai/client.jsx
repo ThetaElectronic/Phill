@@ -7,6 +7,7 @@ import { fetchWithAuth, apiUrl } from "../../lib/api";
 import { loadTokens } from "../../lib/auth";
 
 export default function AiClient({ session }) {
+  const maxDocuments = Number(process.env.NEXT_PUBLIC_AI_MAX_DOCUMENTS || 5);
   const [tokens] = useState(() => session || loadTokens());
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
