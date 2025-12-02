@@ -3,15 +3,22 @@ import { getSessionOrRedirect, serverFetchWithAuth } from "../../lib/session";
 
 async function loadDashboardData(session) {
   try {
-    const [incidentsRes, documentsRes] = await Promise.all([
+    const [incidentsRes, documentsRes, profileRes] = await Promise.all([
       serverFetchWithAuth("/incidents", session),
       serverFetchWithAuth("/documents", session),
+      serverFetchWithAuth("/users/me", session),
     ]);
     const incidents = incidentsRes.ok ? await incidentsRes.json() : [];
     const documents = documentsRes.ok ? await documentsRes.json() : [];
-    return { incidents, documents };
+    const profile = profileRes.ok ? await profileRes.json() : null;
+    return { incidents, documents, profile };
   } catch (error) {
-    return { incidents: [], documents: [], error: error instanceof Error ? error.message : "Unable to load data" };
+    return {
+      incidents: [],
+      documents: [],
+      profile: null,
+      error: error instanceof Error ? error.message : "Unable to load data",
+    };
   }
 }
 
@@ -52,26 +59,31 @@ export default async function DashboardPage() {
           {data.error && <div className="status-error">{data.error}</div>}
         </div>
 
-        <div className="card glass stack" style={{ gap: "0.5rem" }}>
-          <h2 style={{ margin: 0 }}>Quick links</h2>
-          <div className="pill-row">
+          <div className="card glass stack" style={{ gap: "0.5rem" }}>
+            <h2 style={{ margin: 0 }}>Quick links</h2>
+            <div className="pill-row">
             <a className="pill" href="/incidents/create">
               New incident
             </a>
             <a className="pill" href="/documents">
               Documents
             </a>
-            <a className="pill" href="/ai">
-              AI assistant
-            </a>
-            <a className="pill" href="/tickets">
-              Tickets
-            </a>
-            <a className="pill pill-soft" href="/account">
-              Account
-            </a>
+              <a className="pill" href="/ai">
+                AI assistant
+              </a>
+              <a className="pill" href="/tickets">
+                Tickets
+              </a>
+              <a className="pill pill-soft" href="/account">
+                Account
+              </a>
+              {data.profile?.role === "admin" && (
+                <a className="pill pill-outline" href="/admin">
+                  Admin
+                </a>
+              )}
+            </div>
           </div>
-        </div>
       </section>
     </AuthWall>
   );

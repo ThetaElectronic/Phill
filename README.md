@@ -66,6 +66,9 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
   - Change password: `curl -X POST $NEXT_BACKEND_URL/api/users/me/password -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"current_password":"old","new_password":"new-secret"}'`
   - On password change, existing tokens stay valid until they expire; refresh from the UI or re-login to rotate them immediately.
 
+### Admin workspace
+- Visit `/admin` for a clean landing page that links to all admin tools (system health, diagnostics, AI training files, users, requests, and email checks) without cluttering the main UI.
+
 ### Admin user management
 - Admins and founders can manage users from `/admin/users` (UI) or `/api/users` (API). Admins are constrained to their own company scope and cannot grant a higher role than their own.
 - The UI shows a simple list of existing users you are allowed to see and a form to add new accounts with name, email, password, and role. Each user row also includes a **password reset** control for setting a temporary password when someone is locked out.
