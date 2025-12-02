@@ -16,6 +16,7 @@ export default function AiClient({ session }) {
   const [useMemory, setUseMemory] = useState(false);
   const [meta, setMeta] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [documentFilter, setDocumentFilter] = useState("all");
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
@@ -201,6 +202,15 @@ export default function AiClient({ session }) {
   };
 
   const aiReady = aiStatus?.ok !== false;
+  const filteredDocs = Array.isArray(documents)
+    ? documents.filter((doc) =>
+        documentFilter === "all"
+          ? true
+          : documentFilter === "company"
+            ? doc.scope !== "global"
+            : doc.scope === "global",
+      )
+    : [];
 
   return (
     <AuthWall session={tokens} title="AI chat is protected" description="Sign in to use Phill AI with tenant-scoped memory.">
@@ -256,6 +266,15 @@ export default function AiClient({ session }) {
                     />
                     <span className="tiny muted">Global</span>
                   </label>
+                  <select
+                    className="secondary"
+                    value={documentFilter}
+                    onChange={(event) => setDocumentFilter(event.target.value)}
+                  >
+                    <option value="all">All</option>
+                    <option value="company">Company</option>
+                    <option value="global">Global</option>
+                  </select>
                 </div>
               </div>
             </header>
@@ -288,8 +307,10 @@ export default function AiClient({ session }) {
 
             <div className="stack" style={{ gap: "0.35rem", maxHeight: "220px", overflow: "auto" }}>
               {documentsLoading && <div className="muted tiny">Loading documents…</div>}
-              {!documentsLoading && documents.length === 0 && <div className="muted tiny">No documents uploaded yet</div>}
-              {documents.map((doc) => (
+              {!documentsLoading && filteredDocs.length === 0 && (
+                <div className="muted tiny">{documents.length === 0 ? "No documents uploaded yet" : "No documents match this filter"}</div>
+              )}
+              {filteredDocs.map((doc) => (
                 <div key={doc.id} className="stack surface" style={{ gap: "0.35rem", padding: "0.5rem" }}>
                   <label className="chip-row" style={{ gap: "0.4rem", alignItems: "start" }}>
                     <input
