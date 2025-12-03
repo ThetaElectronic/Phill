@@ -22,6 +22,11 @@ export default function AdminWall({ children, title = "Admin access required", d
       try {
         const res = await fetchWithAuth("/api/users/me");
         if (!res.ok) {
+          if (res.status === 401 || res.status === 422) {
+            clearTokens();
+            if (active) setState({ status: "unauthenticated", message: "Login to continue", profile: null });
+            return;
+          }
           const status = res.status === 403 ? "forbidden" : "error";
           const message = res.status === 403 ? "Admins only" : `Unable to verify access (${res.status})`;
           if (active) setState({ status, message, profile: null });

@@ -27,8 +27,48 @@ export default function AiClient({ session }) {
   const [copiedMessage, setCopiedMessage] = useState(null);
 
   useEffect(() => {
-    setStatus((prev) => (prev.state === "idle" ? prev : prev));
-  }, []);
+    if (!messageListRef.current) return;
+    const last = messageListRef.current.lastElementChild;
+    if (last) last.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    const loadAiStatus = async () => {
+      try {
+        const res = await fetch(apiUrl("/ai/status"));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && typeof data === "object") setAiStatus(data);
+      } catch (error) {
+        console.error("Unable to load AI status", error);
+      }
+    };
+
+    loadAiStatus();
+    loadDocuments();
+  }, [tokens]);
+
+  const loadDocuments = async () => {
+    if (!tokens) return;
+    setDocumentsLoading(true);
+    setDocStatus((prev) => (prev.state === "loading" ? prev : { state: "idle" }));
+    try {
+      const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
+      if (!res.ok) {
+        const detail = await res.text();
+        setDocStatus({ state: "error", message: detail || "Unable to load documents" });
+        return;
+      }
+      const data = await res.json();
+      setDocuments(Array.isArray(data) ? data : []);
+      setDocStatus({ state: "idle" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load documents";
+      setDocStatus({ state: "error", message });
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!messageListRef.current) return;
@@ -75,6 +115,7 @@ export default function AiClient({ session }) {
   };
 
   const sendMessage = async () => {
+    if (status.state === "loading") return;
     if (!tokens) {
       setStatus({ state: "error", message: "Login first" });
       return;
