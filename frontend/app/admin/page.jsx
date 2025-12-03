@@ -1,9 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
-import AuthWall from "../../components/AuthWall";
-import { fetchWithAuth } from "../../lib/api";
+import AdminWall from "../../components/AdminWall";
 
 function AdminCard({ title, description, href, badge }) {
   return (
@@ -22,61 +19,8 @@ function AdminCard({ title, description, href, badge }) {
 }
 
 export default function AdminHomePage() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const isAdmin = useMemo(() => profile?.role === "admin", [profile]);
-
-  useEffect(() => {
-    let mounted = true;
-    const loadProfile = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await fetchWithAuth("/api/users/me");
-        if (!res.ok) {
-          throw new Error(res.status === 403 ? "Admins only" : "Unable to load profile");
-        }
-        const data = await res.json();
-        if (mounted) setProfile(data);
-      } catch (err) {
-        if (mounted) setError(err instanceof Error ? err.message : "Unable to load profile");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    loadProfile();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <AuthWall title="Loading admin tools" description="Checking your permissions before showing controls.">
-        <div className="card glass stack" style={{ gap: "0.35rem" }}>
-          <div className="pill pill-soft">Loading…</div>
-          <p className="muted tiny" style={{ margin: 0 }}>Preparing the admin workspace.</p>
-        </div>
-      </AuthWall>
-    );
-  }
-
-  if (error || !isAdmin) {
-    return (
-      <AuthWall title="Admin workspace" description="Only admins can view these tools.">
-        <div className="card glass stack" style={{ gap: "0.4rem" }}>
-          <div className="pill pill-error">Admins only</div>
-          <p className="muted" style={{ margin: 0 }}>{error || "You need admin permissions to view this area."}</p>
-        </div>
-      </AuthWall>
-    );
-  }
-
   return (
-    <AuthWall title="Admin workspace" description="Quick entry points for company admins.">
+    <AdminWall title="Admin workspace" description="Only admins can view these tools.">
       <section className="stack" style={{ gap: "1rem", maxWidth: "1040px" }}>
         <div className="stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
@@ -128,6 +72,6 @@ export default function AdminHomePage() {
           />
         </div>
       </section>
-    </AuthWall>
+    </AdminWall>
   );
 }

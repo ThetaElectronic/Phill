@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import AuthWall from "../../../components/AuthWall";
+import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
 
 export default function AdminEmailPage() {
@@ -65,7 +65,7 @@ export default function AdminEmailPage() {
   };
 
   return (
-    <AuthWall title="Email admin" description="Send a test message using the configured SMTP credentials.">
+    <AdminWall title="Email admin" description="Send a test message using the configured SMTP credentials.">
       <section className="stack" style={{ gap: "1rem", maxWidth: "720px" }}>
         <div className="stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
@@ -120,6 +120,6 @@ export default function AdminEmailPage() {
           {status.state === "error" && <div className="status-error">{status.message}</div>}
         </form>
       </section>
-    </AuthWall>
+    </AdminWall>
   );
 }

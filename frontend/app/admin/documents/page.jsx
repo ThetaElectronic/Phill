@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import AuthWall from "../../../components/AuthWall";
+import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
 
 function formatBytes(bytes) {
@@ -175,7 +175,7 @@ export default function AdminDocumentsPage() {
   };
 
   return (
-    <AuthWall title="Admin AI documents" description="Review and adjust AI training uploads for your company.">
+    <AdminWall title="Admin AI documents" description="Review and adjust AI training uploads for your company.">
       <section className="stack" style={{ gap: "1rem" }}>
         <div className="stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
@@ -227,6 +227,6 @@ export default function AdminDocumentsPage() {
             ))}
         </div>
       </section>
-    </AuthWall>
+    </AdminWall>
   );
 }

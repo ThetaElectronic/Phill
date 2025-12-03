@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import AuthWall from "../../../components/AuthWall";
+import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
 
 function StatusPill({ ok, label }) {
@@ -107,7 +107,7 @@ export default function AdminSystemPage() {
   const version = data?.version || "dev";
 
   return (
-    <AuthWall
+    <AdminWall
       title="Admin system panel is protected"
       description="Login with admin permissions to view system checks and metrics."
     >
@@ -163,6 +163,6 @@ export default function AdminSystemPage() {
 
         {/* Detailed metrics live in diagnostics now to reduce clutter */}
       </section>
-    </AuthWall>
+    </AdminWall>
   );
 }

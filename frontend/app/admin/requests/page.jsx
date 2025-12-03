@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import AuthWall from "../../../components/AuthWall";
+import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
 
 function RequestsCard({ title, description, items, loading, error }) {
@@ -90,7 +90,7 @@ export default function AdminRequestsPage() {
   }, []);
 
   return (
-    <AuthWall title="Admin requests" description="View access and password reset submissions.">
+    <AdminWall title="Admin requests" description="View access and password reset submissions.">
       <div className="stack" style={{ gap: "1rem" }}>
         <header className="stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
@@ -128,6 +128,6 @@ export default function AdminRequestsPage() {
           />
         </div>
       </div>
-    </AuthWall>
+    </AdminWall>
   );
 }

@@ -68,6 +68,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 
 ### Admin workspace
 - Visit `/admin` for a clean landing page that links to all admin tools (system health, diagnostics, AI training files, users, requests, and email checks) without cluttering the main UI.
+- Admin pages are wrapped in an admin-only guard: signed-in non-admins see a clear "Admins only" notice with a link back to the dashboard instead of broken API calls.
 
 ### Admin user management
 - Admins and founders can manage users from `/admin/users` (UI) or `/api/users` (API). Admins are constrained to their own company scope and cannot grant a higher role than their own.

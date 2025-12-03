@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import AuthWall from "../../../components/AuthWall";
+import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth, apiUrl } from "../../../lib/api";
 
 function DetailCard({ title, description, children }) {
@@ -119,7 +119,10 @@ export default function AdminDiagnosticsPage() {
   const metrics = adminStatus?.metrics;
 
   return (
-    <AuthWall title="Admin diagnostics are protected" description="Sign in with admin permissions to view deployment details.">
+    <AdminWall
+      title="Admin diagnostics are protected"
+      description="Sign in with admin permissions to view deployment details."
+    >
       <section className="stack" style={{ gap: "1rem" }}>
         <div className="card glass stack" style={{ gap: "0.5rem" }}>
           <div className="stack" style={{ gap: "0.1rem" }}>
@@ -272,6 +275,6 @@ export default function AdminDiagnosticsPage() {
           </div>
         </DetailCard>
       </section>
-    </AuthWall>
+    </AdminWall>
   );
 }

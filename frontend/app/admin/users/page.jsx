@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import AuthWall from "../../../components/AuthWall";
+import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
 
 const ROLE_OPTIONS = [
@@ -160,6 +160,7 @@ export default function AdminUsersPage() {
   };
 
   return (
+    <AdminWall title="Admin users" description="Manage team accounts within your tenant.">
     <AuthWall title="Admin users" description="Manage team accounts within your tenant.">
       <section className="stack" style={{ gap: "1rem", maxWidth: "1080px" }}>
         <div className="stack" style={{ gap: "0.35rem" }}>
@@ -319,6 +320,6 @@ export default function AdminUsersPage() {
           </div>
         </div>
       </section>
-    </AuthWall>
+    </AdminWall>
   );
 }
