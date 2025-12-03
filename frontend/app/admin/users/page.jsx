@@ -23,10 +23,22 @@ export default function AdminUsersPage() {
     password: "",
     role: "user",
   });
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
 
   const canSubmit = useMemo(() => {
     return form.name.trim() && form.email.trim() && form.password.trim();
   }, [form]);
+
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return users.filter((user) => {
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      if (!query) return matchesRole;
+      const haystack = `${user.name} ${user.email} ${user.username || ""}`.toLowerCase();
+      return matchesRole && haystack.includes(query);
+    });
+  }, [roleFilter, search, users]);
 
   useEffect(() => {
     let cancelled = false;
@@ -233,11 +245,37 @@ export default function AdminUsersPage() {
 
             {status.state === "loading" && <div className="pill pill-soft">Loading users…</div>}
 
+            <div className="chip-row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
+              <label className="stack" style={{ gap: "0.2rem", flex: "1 1 260px", minWidth: "0" }}>
+                <span className="tiny muted">Filter</span>
+                <input
+                  type="search"
+                  placeholder="Search by name or email"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </label>
+              <label className="stack" style={{ gap: "0.2rem", width: "200px" }}>
+                <span className="tiny muted">Role</span>
+                <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+                  <option value="all">All roles</option>
+                  {ROLE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
             <div className="stack" style={{ gap: "0.5rem" }}>
               {users.length === 0 && status.state !== "loading" && (
                 <div className="tiny muted">No users found for your scope.</div>
               )}
-              {users.map((user) => (
+              {users.length > 0 && filteredUsers.length === 0 && (
+                <div className="tiny muted">No users match your filters.</div>
+              )}
+              {filteredUsers.map((user) => (
                 <div key={user.id} className="card glass stack" style={{ gap: "0.45rem" }}>
                   <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
                     <span className="pill">{user.role}</span>
