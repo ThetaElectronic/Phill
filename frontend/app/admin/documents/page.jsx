@@ -5,6 +5,18 @@ import { useEffect, useMemo, useState } from "react";
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
 
+const filters = [
+  { value: "all", label: "All" },
+  { value: "company", label: "Company" },
+  { value: "global", label: "Global" },
+];
+
+const sorters = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "name", label: "Name" },
+];
+
 function formatBytes(bytes) {
   if (!bytes && bytes !== 0) return "?";
   const thresholds = [
@@ -38,6 +50,20 @@ function SkeletonCard() {
 function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
   const created = useMemo(() => new Date(doc.created_at), [doc.created_at]);
   const [expanded, setExpanded] = useState(false);
+  const [copyState, setCopyState] = useState("idle");
+
+  const handleCopy = async (text) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 1600);
+    } catch (error) {
+      console.error("Copy failed", error);
+      setCopyState("error");
+      setTimeout(() => setCopyState("idle"), 1600);
+    }
+  };
 
   return (
     <div className="card surface stack" style={{ gap: "0.5rem" }}>
@@ -79,6 +105,9 @@ function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
               {expanded ? doc.text : doc.excerpt || doc.text.slice(0, 300)}
             </div>
             <div className="chip-row" style={{ justifyContent: "flex-end" }}>
+              <button type="button" className="ghost" onClick={() => handleCopy(doc.text || doc.excerpt)}>
+                {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy text"}
+              </button>
               <button type="button" className="ghost" onClick={() => setExpanded((prev) => !prev)}>
                 {expanded ? "Hide text" : "View full text"}
               </button>
@@ -109,6 +138,30 @@ export default function AdminDocumentsPage() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ state: "idle", message: "" });
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [lastLoaded, setLastLoaded] = useState(null);
+
+  const filteredDocs = useMemo(() => {
+    const scoped = filter === "all" ? documents : documents.filter((doc) => doc.scope === filter);
+    if (!query.trim()) return scoped;
+    const term = query.trim().toLowerCase();
+    return scoped.filter((doc) => {
+      const haystacks = [doc.filename, doc.excerpt, doc.text, doc.scope, doc.created_at];
+      return haystacks.some((value) => (value ? String(value).toLowerCase().includes(term) : false));
+    });
+  }, [documents, filter, query]);
+
+  const visibleDocs = useMemo(() => {
+    const sorted = [...filteredDocs];
+    sorted.sort((a, b) => {
+      if (sort === "oldest") return new Date(a.created_at) - new Date(b.created_at);
+      if (sort === "name") return a.filename.localeCompare(b.filename);
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+    return sorted;
+  }, [filteredDocs, sort]);
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -122,6 +175,7 @@ export default function AdminDocumentsPage() {
       }
       const payload = await res.json();
       setDocuments(Array.isArray(payload) ? payload : []);
+      setLastLoaded(new Date());
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load documents";
       setStatus({ state: "error", message });
@@ -144,6 +198,7 @@ export default function AdminDocumentsPage() {
         return;
       }
       setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
+      setLastLoaded(new Date());
       setStatus({ state: "success", message: `${doc.filename || "Document"} removed` });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete";
@@ -167,6 +222,7 @@ export default function AdminDocumentsPage() {
         return;
       }
       setDocuments((prev) => prev.map((item) => (item.id === doc.id ? payload : item)));
+      setLastLoaded(new Date());
       setStatus({ state: "success", message: `${doc.filename || "Document"} scope updated` });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to update";
@@ -190,13 +246,82 @@ export default function AdminDocumentsPage() {
         </div>
 
         <div className="card glass stack" style={{ gap: "0.75rem" }}>
-          <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-            <span className="muted tiny">
-              {documents.length ? `${documents.length} document${documents.length === 1 ? "" : "s"}` : "No documents yet"}
-            </span>
-            <button type="button" className="secondary" onClick={loadDocuments} disabled={loading || status.state === "loading"}>
-              {loading ? "Refreshing…" : "Refresh"}
-            </button>
+          <div className="stack" style={{ gap: "0.65rem" }}>
+            <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div className="chip-row" role="radiogroup" aria-label="Filter documents by scope">
+                {filters.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`chip${filter === item.value ? " chip-active" : ""}`}
+                    onClick={() => setFilter(item.value)}
+                    role="radio"
+                    aria-checked={filter === item.value}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="chip-row" style={{ alignItems: "center", gap: "0.35rem" }}>
+                <div className="chip-row" role="radiogroup" aria-label="Sort documents">
+                  {sorters.map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={`chip chip-soft${sort === item.value ? " chip-active" : ""}`}
+                      onClick={() => setSort(item.value)}
+                      role="radio"
+                      aria-checked={sort === item.value}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                {lastLoaded && (
+                  <span className="tiny muted" aria-live="polite">
+                    Updated {lastLoaded.toLocaleTimeString()}
+                  </span>
+                )}
+                <span className="muted tiny">
+                  {visibleDocs.length
+                    ? `${visibleDocs.length} shown${documents.length !== visibleDocs.length ? ` of ${documents.length}` : ""}`
+                    : documents.length
+                      ? "No documents match"
+                      : "No documents yet"}
+                </span>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={loadDocuments}
+                  disabled={loading || status.state === "loading"}
+                >
+                  {loading ? "Refreshing…" : "Refresh"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => {
+                    setFilter("all");
+                    setQuery("");
+                    setSort("newest");
+                  }}
+                >
+                  Reset filters
+                </button>
+              </div>
+            </div>
+            <div className="stack" style={{ gap: "0.35rem" }}>
+              <label className="tiny muted" htmlFor="admin-doc-search">
+                Search by file name, scope, or stored text
+              </label>
+              <input
+                id="admin-doc-search"
+                type="search"
+                placeholder="Search documents"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </div>
           </div>
 
           {status.state === "error" && <div className="status-error">{status.message}</div>}
@@ -211,12 +336,14 @@ export default function AdminDocumentsPage() {
             </div>
           )}
 
-          {!loading && documents.length === 0 && (
-            <div className="status-info">No AI documents have been uploaded yet.</div>
+          {!loading && visibleDocs.length === 0 && (
+            <div className="status-info">
+              {documents.length === 0 ? "No AI documents have been uploaded yet." : "No documents match these filters."}
+            </div>
           )}
 
           {!loading &&
-            documents.map((doc) => (
+            visibleDocs.map((doc) => (
               <DocumentCard
                 key={doc.id}
                 doc={doc}

@@ -34,6 +34,20 @@ function formatBytes(bytes) {
 function DocumentCard({ doc }) {
   const created = useMemo(() => new Date(doc.created_at), [doc.created_at]);
   const [expanded, setExpanded] = useState(false);
+  const [copyState, setCopyState] = useState("idle");
+
+  const handleCopy = async (text) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 1600);
+    } catch (error) {
+      console.error("Copy failed", error);
+      setCopyState("error");
+      setTimeout(() => setCopyState("idle"), 1600);
+    }
+  };
 
   return (
     <div className="card surface stack" style={{ gap: "0.5rem" }}>
@@ -67,6 +81,9 @@ function DocumentCard({ doc }) {
               {expanded ? doc.text : doc.excerpt || doc.text.slice(0, 300)}
             </div>
             <div className="chip-row" style={{ justifyContent: "flex-end" }}>
+              <button type="button" className="ghost" onClick={() => handleCopy(doc.text || doc.excerpt)}>
+                {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy text"}
+              </button>
               <button type="button" className="ghost" onClick={() => setExpanded((prev) => !prev)}>
                 {expanded ? "Hide text" : "View full text"}
               </button>
@@ -82,6 +99,21 @@ function DocumentCard({ doc }) {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function DocumentSkeleton() {
+  return (
+    <div className="card surface stack" style={{ gap: "0.75rem" }}>
+      <div className="chip-row" style={{ gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
+        <div className="skeleton" style={{ width: "30%", height: "1rem" }} />
+        <div className="skeleton" style={{ width: "12%", height: "0.9rem" }} />
+        <div className="skeleton" style={{ width: "18%", height: "0.9rem" }} />
+        <div className="skeleton" style={{ width: "22%", height: "0.9rem" }} />
+      </div>
+      <div className="skeleton" style={{ width: "55%", height: "0.9rem" }} />
+      <div className="skeleton" style={{ width: "100%", height: "5rem" }} />
     </div>
   );
 }
@@ -114,6 +146,12 @@ export default function DocumentsClient({ session }) {
     });
     return sorted;
   }, [filteredDocs, sort]);
+
+  const totalCount = documents.length;
+  const shownCount = visibleDocs.length;
+  const isLoading = state.status === "loading";
+  const showList = (state.status === "success" || (isLoading && shownCount)) && shownCount > 0;
+  const showEmpty = state.status === "success" && shownCount === 0;
 
   useEffect(() => {
     if (!tokens) return;
@@ -218,9 +256,12 @@ export default function DocumentsClient({ session }) {
                     Updated {lastLoaded.toLocaleTimeString()}
                   </span>
                 )}
-                <span className="muted tiny">{documents.length ? `${documents.length} total` : "No documents"}</span>
-                <button type="button" className="secondary" onClick={handleRefresh} disabled={state.status === "loading"}>
-                  Refresh
+                <span className="muted tiny">
+                  {shownCount ? `${shownCount} shown` : "No documents"}
+                  {totalCount > shownCount && ` • ${totalCount} total`}
+                </span>
+                <button type="button" className="secondary" onClick={handleRefresh} disabled={isLoading}>
+                  {isLoading ? "Refreshing…" : "Refresh"}
                 </button>
                 <button
                   type="button"
@@ -249,14 +290,21 @@ export default function DocumentsClient({ session }) {
             </div>
           </div>
 
-          {state.status === "loading" && <div className="status-info">Loading documents…</div>}
+          {isLoading && (
+            <div className="stack" style={{ gap: "0.75rem" }}>
+              <div className="status-info">Loading documents…</div>
+              <div className="stack" style={{ gap: "0.5rem" }}>
+                {[1, 2, 3].map((item) => (
+                  <DocumentSkeleton key={item} />
+                ))}
+              </div>
+            </div>
+          )}
           {state.status === "error" && <div className="status-error">{state.message || "Unable to load documents"}</div>}
 
-          {state.status === "success" && visibleDocs.length === 0 && (
-            <div className="status-info">No documents match this filter.</div>
-          )}
+          {showEmpty && <div className="status-info">No documents match this filter.</div>}
 
-          {state.status === "success" && visibleDocs.length > 0 && (
+          {showList && (
             <div className="stack" style={{ gap: "0.75rem" }}>
               {visibleDocs.map((doc) => (
                 <DocumentCard key={doc.id} doc={doc} />
