@@ -52,45 +52,41 @@ export default function AdminRequestsPage() {
   const [resetRequests, setResetRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [accessRes, resetRes] = await Promise.all([
+        fetchWithAuth("/api/admin/requests/access"),
+        fetchWithAuth("/api/admin/requests/password-resets"),
+      ]);
+
+      if (!accessRes.ok) {
+        throw new Error(await accessRes.text());
+      }
+      if (!resetRes.ok) {
+        throw new Error(await resetRes.text());
+      }
+
+      const [accessData, resetData] = await Promise.all([
+        accessRes.json(),
+        resetRes.json(),
+      ]);
+
+      setAccessRequests(accessData);
+      setResetRequests(resetData);
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err.message || "Unable to load requests");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      setError("");
-      try {
-        const [accessRes, resetRes] = await Promise.all([
-          fetchWithAuth("/api/admin/requests/access"),
-          fetchWithAuth("/api/admin/requests/password-resets"),
-        ]);
-
-        if (!accessRes.ok) {
-          throw new Error(await accessRes.text());
-        }
-        if (!resetRes.ok) {
-          throw new Error(await resetRes.text());
-        }
-
-        const [accessData, resetData] = await Promise.all([
-          accessRes.json(),
-          resetRes.json(),
-        ]);
-
-        if (mounted) {
-          setAccessRequests(accessData);
-          setResetRequests(resetData);
-        }
-      } catch (err) {
-        if (mounted) setError(err.message || "Unable to load requests");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
     load();
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   return (
@@ -105,6 +101,15 @@ export default function AdminRequestsPage() {
           <p className="muted" style={{ margin: 0 }}>
             Review access requests and password reset submissions captured from the login page.
           </p>
+          <div className="chip-row" style={{ alignItems: "center", gap: "0.5rem" }}>
+            <button type="button" className="secondary" onClick={load} disabled={loading}>
+              {loading ? "Refreshing…" : "Refresh"}
+            </button>
+            {lastUpdated && (
+              <span className="tiny muted">Updated {lastUpdated.toLocaleTimeString()}</span>
+            )}
+            {error && <span className="status-error">{error}</span>}
+          </div>
         </header>
         <div className="grid two-col" style={{ gap: "1rem" }}>
           <RequestsCard

@@ -15,6 +15,7 @@ function Status({ state, message }) {
 export default function AccountClient({ session, user }) {
   const [name, setName] = useState(user?.name || "");
   const [username, setUsername] = useState(user?.username || "");
+  const [initial] = useState({ name: user?.name || "", username: user?.username || "" });
   const [profileState, setProfileState] = useState("idle");
   const [profileMessage, setProfileMessage] = useState("");
 
@@ -22,6 +23,8 @@ export default function AccountClient({ session, user }) {
   const [newPassword, setNewPassword] = useState("");
   const [passwordState, setPasswordState] = useState("idle");
   const [passwordMessage, setPasswordMessage] = useState("");
+
+  const hasProfileChanges = name.trim() !== initial.name || username.trim() !== initial.username;
 
   const saveProfile = async () => {
     setProfileState("loading");
@@ -39,11 +42,14 @@ export default function AccountClient({ session, user }) {
         return;
       }
       setProfileState("success");
+      setProfileMessage("Profile updated");
     } catch (error) {
       setProfileState("error");
       setProfileMessage(error instanceof Error ? error.message : "Unable to update");
     }
   };
+
+  const passwordReady = currentPassword.length >= 1 && newPassword.length >= 8;
 
   const updatePassword = async () => {
     setPasswordState("loading");
@@ -61,6 +67,7 @@ export default function AccountClient({ session, user }) {
         return;
       }
       setPasswordState("success");
+      setPasswordMessage("Password updated");
       setCurrentPassword("");
       setNewPassword("");
     } catch (error) {
@@ -104,8 +111,8 @@ export default function AccountClient({ session, user }) {
           </div>
 
           <div className="chip-row" style={{ gap: "0.35rem" }}>
-            <button type="button" onClick={saveProfile} disabled={profileState === "loading"}>
-              {profileState === "loading" ? "Saving…" : "Save profile"}
+            <button type="button" onClick={saveProfile} disabled={profileState === "loading" || !hasProfileChanges}>
+              {profileState === "loading" ? "Saving…" : hasProfileChanges ? "Save profile" : "No changes"}
             </button>
             <span className="tiny muted">Email: {user?.email || "unknown"}</span>
           </div>
@@ -144,8 +151,8 @@ export default function AccountClient({ session, user }) {
             </label>
           </div>
           <div className="chip-row" style={{ gap: "0.35rem" }}>
-            <button type="button" onClick={updatePassword} disabled={passwordState === "loading"}>
-              {passwordState === "loading" ? "Updating…" : "Update password"}
+            <button type="button" onClick={updatePassword} disabled={passwordState === "loading" || !passwordReady}>
+              {passwordState === "loading" ? "Updating…" : passwordReady ? "Update password" : "Enter passwords"}
             </button>
             <span className="tiny muted">Tokens stay valid until they expire.</span>
           </div>

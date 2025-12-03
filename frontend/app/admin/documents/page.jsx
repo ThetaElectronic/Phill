@@ -25,6 +25,16 @@ function ScopeBadge({ scope }) {
   return <span className="pill pill-outline">Company scoped</span>;
 }
 
+function SkeletonCard() {
+  return (
+    <div className="card surface stack" style={{ gap: "0.35rem" }}>
+      <div className="pill pill-soft" style={{ width: "30%", height: "0.9rem" }} />
+      <div className="pill" style={{ width: "55%", height: "0.9rem" }} />
+      <div className="pill pill-outline" style={{ width: "40%", height: "0.9rem" }} />
+    </div>
+  );
+}
+
 function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
   const created = useMemo(() => new Date(doc.created_at), [doc.created_at]);
 
@@ -170,7 +180,13 @@ export default function AdminDocumentsPage() {
           {status.state === "success" && <div className="status-success">{status.message}</div>}
           {status.state === "loading" && <div className="status-info">{status.message || "Working…"}</div>}
 
-          {loading && <div className="status-info">Loading documents…</div>}
+          {loading && (
+            <div className="stack" style={{ gap: "0.5rem" }}>
+              <div className="status-info">Loading documents…</div>
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          )}
 
           {!loading && documents.length === 0 && (
             <div className="status-info">No AI documents have been uploaded yet.</div>
