@@ -52,11 +52,17 @@ export default function DocumentsClient({ session }) {
   const [state, setState] = useState({ status: "idle" });
   const [filter, setFilter] = useState("all");
   const [lastLoaded, setLastLoaded] = useState(null);
+  const [query, setQuery] = useState("");
 
   const filteredDocs = useMemo(() => {
-    if (filter === "all") return documents;
-    return documents.filter((doc) => doc.scope === filter);
-  }, [documents, filter]);
+    const scoped = filter === "all" ? documents : documents.filter((doc) => doc.scope === filter);
+    if (!query.trim()) return scoped;
+    const term = query.trim().toLowerCase();
+    return scoped.filter((doc) => {
+      const haystacks = [doc.filename, doc.excerpt, doc.scope, doc.created_at];
+      return haystacks.some((value) => (value ? String(value).toLowerCase().includes(term) : false));
+    });
+  }, [documents, filter, query]);
 
   useEffect(() => {
     if (!tokens) return;
@@ -125,34 +131,55 @@ export default function DocumentsClient({ session }) {
         </div>
 
         <div className="card glass stack" style={{ gap: "0.75rem" }}>
-          <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-            <div className="chip-row" role="radiogroup" aria-label="Filter documents by scope">
-              {filters.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  className={`chip${filter === item.value ? " chip-active" : ""}`}
-                  onClick={() => setFilter(item.value)}
-                  role="radio"
-                  aria-checked={filter === item.value}
-                >
-                  {item.label}
+          <div className="stack" style={{ gap: "0.65rem" }}>
+            <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div className="chip-row" role="radiogroup" aria-label="Filter documents by scope">
+                {filters.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`chip${filter === item.value ? " chip-active" : ""}`}
+                    onClick={() => setFilter(item.value)}
+                    role="radio"
+                    aria-checked={filter === item.value}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="chip-row" style={{ alignItems: "center", gap: "0.35rem" }}>
+                {lastLoaded && (
+                  <span className="tiny muted" aria-live="polite">
+                    Updated {lastLoaded.toLocaleTimeString()}
+                  </span>
+                )}
+                <span className="muted tiny">{documents.length ? `${documents.length} total` : "No documents"}</span>
+                <button type="button" className="secondary" onClick={handleRefresh} disabled={state.status === "loading"}>
+                  Refresh
                 </button>
-              ))}
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => {
+                    setFilter("all");
+                    setQuery("");
+                  }}
+                >
+                  Reset filters
+                </button>
+              </div>
             </div>
-            <div className="chip-row" style={{ alignItems: "center", gap: "0.35rem" }}>
-              {lastLoaded && (
-                <span className="tiny muted" aria-live="polite">
-                  Updated {lastLoaded.toLocaleTimeString()}
-                </span>
-              )}
-              <span className="muted tiny">{documents.length ? `${documents.length} total` : "No documents"}</span>
-              <button type="button" className="secondary" onClick={handleRefresh} disabled={state.status === "loading"}>
-                Refresh
-              </button>
-              <button type="button" className="ghost" onClick={() => setFilter("all")}>
-                Reset filters
-              </button>
+            <div className="stack" style={{ gap: "0.35rem" }}>
+              <label className="tiny muted" htmlFor="document-search">
+                Search by file name, scope, or excerpt
+              </label>
+              <input
+                id="document-search"
+                type="search"
+                placeholder="Search documents"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
             </div>
           </div>
 
