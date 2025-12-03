@@ -19,7 +19,7 @@ function decodeExp(accessToken) {
   }
 }
 
-export default function SessionIndicator() {
+export default function SessionIndicator({ label, compact = false }) {
   const [tokens, setTokens] = useState(null);
 
   useEffect(() => {
@@ -29,6 +29,18 @@ export default function SessionIndicator() {
   const expiry = useMemo(() => decodeExp(tokens?.access_token), [tokens]);
   const apiBase = useMemo(() => getApiBase(), []);
   const healthUrl = useMemo(() => apiUrl("/health"), []);
+
+  if (compact) {
+    return (
+      <div className="chip" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+        <span className={`status-dot ${tokens ? "dot-on" : "dot-off"}`} />
+        <span className="tiny muted" style={{ lineHeight: 1 }}>
+          {tokens ? "Authenticated" : "Signed out"}
+        </span>
+        {label ? <strong style={{ fontSize: "0.85rem" }}>{label}</strong> : null}
+      </div>
+    );
+  }
 
   return (
     <div className="session-card glass">

@@ -27,3 +27,6 @@ out/
 *.log
 /.docker
 
+# TLS (provide real certs on the server; keep them out of Git)
+deploy/ssl/*.pem
+
