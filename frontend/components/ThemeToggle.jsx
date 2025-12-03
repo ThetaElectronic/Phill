@@ -17,9 +17,22 @@ export default function ThemeToggle({ className = "ghost" }) {
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-    const initial = stored === "dark" ? "dark" : "light";
+    const prefersDark =
+      typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const initial = stored === "dark" || (!stored && prefersDark) ? "dark" : "light";
     setTheme(initial);
     applyTheme(initial);
+
+    if (!stored && typeof window !== "undefined" && window.matchMedia) {
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      const handle = (event) => {
+        const next = event.matches ? "dark" : "light";
+        setTheme(next);
+        applyTheme(next);
+      };
+      media.addEventListener("change", handle);
+      return () => media.removeEventListener("change", handle);
+    }
   }, []);
 
   const toggle = () => {

@@ -7,6 +7,18 @@ export const metadata = {
   description: "Secure multi-company operations platform",
 };
 
+const themeInitScript = `(() => {
+  try {
+    const stored = localStorage.getItem("phill_theme");
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = stored || (prefersDark ? "dark" : "light");
+    const isDark = theme === "dark";
+    document.documentElement.classList.toggle("theme-dark", isDark);
+    document.body?.classList.toggle("theme-dark", isDark);
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  } catch (err) {}
+})();`;
+
 export default async function RootLayout({ children }) {
   const session = getServerSession();
   const isAuthed = Boolean(session?.access_token);
@@ -27,7 +39,6 @@ export default async function RootLayout({ children }) {
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/documents", label: "Documents" },
-    { href: "/ai", label: "Phill AI" },
     { href: "/account", label: "Account" },
   ];
   if (isAdmin) {
@@ -37,6 +48,9 @@ export default async function RootLayout({ children }) {
 
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         <div className="bg-grid gradient-shell">
           {isAuthed && <NavBar navLinks={navLinks} userLabel={userLabel} />}
