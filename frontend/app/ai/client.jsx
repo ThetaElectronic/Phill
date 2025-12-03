@@ -23,10 +23,17 @@ export default function AiClient({ session }) {
   const [docStatus, setDocStatus] = useState({ state: "idle" });
   const [docScope, setDocScope] = useState("company");
   const fileInputRef = useRef(null);
+  const messageListRef = useRef(null);
 
   useEffect(() => {
     setStatus((prev) => (prev.state === "idle" ? prev : prev));
   }, []);
+
+  useEffect(() => {
+    if (!messageListRef.current) return;
+    const last = messageListRef.current.lastElementChild;
+    if (last) last.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   useEffect(() => {
     const loadAiStatus = async () => {
@@ -376,6 +383,12 @@ export default function AiClient({ session }) {
                 placeholder="Ask Phill"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                    event.preventDefault();
+                    sendMessage();
+                  }
+                }}
               />
             </label>
             <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
@@ -383,9 +396,18 @@ export default function AiClient({ session }) {
                 <input type="checkbox" checked={useMemory} onChange={(e) => setUseMemory(e.target.checked)} />
                 <span className="tiny muted">Save to my personal memory</span>
               </label>
-              <button type="button" onClick={sendMessage} disabled={status.state === "loading" || !aiReady}>
-                {status.state === "loading" ? "Sending…" : "Send"}
-              </button>
+              <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                {selectedDocs.length > 0 && (
+                  <span className="tiny muted">{selectedDocs.length} document{selectedDocs.length === 1 ? "" : "s"} attached</span>
+                )}
+                <button
+                  type="button"
+                  onClick={sendMessage}
+                  disabled={status.state === "loading" || !aiReady || !input.trim()}
+                >
+                  {status.state === "loading" ? "Sending…" : "Send"}
+                </button>
+              </div>
             </div>
 
             {status.state === "error" && <div className="status-error">{status.message}</div>}
@@ -399,7 +421,7 @@ export default function AiClient({ session }) {
             )}
 
             {messages.length > 0 && (
-              <div className="stack" style={{ gap: "0.5rem" }}>
+              <div className="stack" style={{ gap: "0.5rem", maxHeight: "320px", overflow: "auto" }} ref={messageListRef}>
                 {messages.map((msg, idx) => (
                   <div key={`${msg.role}-${idx}`} className="card glass">
                     <div className="badge-list" style={{ marginBottom: "0.25rem" }}>
