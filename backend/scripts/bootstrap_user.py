@@ -22,8 +22,12 @@ def bootstrap_user(
     role: str = ROLE_ADMIN,
     username: str | None = None,
     display_name: str | None = None,
-) -> str:
-    """Create a user with the given role if it does not exist."""
+    update_if_exists: bool = False,
+) -> tuple[str, str]:
+    """Create or update a user with the given role.
+
+    Returns (email, action) where action is "created", "updated", or "exists".
+    """
 
     normalized_role = role if role in ROLE_HIERARCHY else ROLE_ADMIN
 
@@ -35,7 +39,17 @@ def bootstrap_user(
 
         user = session.exec(select(User).where(User.email == email)).first()
         if user:
-            return user.email
+            if update_if_exists:
+                user.company_id = company.id
+                user.role = normalized_role
+                user.username = username or user.username or email
+                user.name = display_name or user.name or username or email
+                user.password_hash = hash_password(password)
+                session.add(user)
+                session.commit()
+                return user.email, "updated"
+
+            return user.email, "exists"
 
         member = User(
             id=str(uuid4()),
@@ -48,7 +62,7 @@ def bootstrap_user(
         )
         session.add(member)
         session.commit()
-        return member.email
+        return member.email, "created"
 
 
 def main() -> None:
@@ -60,6 +74,11 @@ def main() -> None:
     parser.add_argument("--role", default=os.getenv("BOOTSTRAP_ROLE", ROLE_ADMIN), help="User role (default admin)")
     parser.add_argument("--username", default=os.getenv("BOOTSTRAP_USERNAME"), help="Username (defaults to email)")
     parser.add_argument("--name", default=os.getenv("BOOTSTRAP_NAME"), help="Display name (defaults to username/email)")
+    parser.add_argument(
+        "--update",
+        action="store_true",
+        help="Update the password/name/role if the user already exists",
+    )
 
     args = parser.parse_args()
 
@@ -73,7 +92,7 @@ def main() -> None:
     if missing:
         parser.error(f"Missing required arguments: {' '.join(missing)}")
 
-    email = bootstrap_user(
+    email, action = bootstrap_user(
         company_name=args.company,
         company_domain=args.domain,
         email=args.email,
@@ -81,8 +100,10 @@ def main() -> None:
         role=args.role,
         username=args.username,
         display_name=args.name,
+        update_if_exists=args.update,
     )
-    print(f"User ready: {email}")
+    verb = "updated" if action == "updated" else "ready"
+    print(f"User {verb}: {email}")
 
 
 if __name__ == "__main__":
