@@ -27,7 +27,7 @@ class DocumentPayload(BaseModel):
     filename: str
     content_type: str | None = None
     size: int
-    created_at: datetime
+    created_at: datetime | None = None
     excerpt: str | None = None
     text: str | None = None
     scope: Literal["company", "global"] = "company"

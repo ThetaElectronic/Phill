@@ -48,7 +48,7 @@ function SkeletonCard() {
 }
 
 function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
-  const created = useMemo(() => new Date(doc.created_at), [doc.created_at]);
+  const created = useMemo(() => (doc?.created_at ? new Date(doc.created_at) : null), [doc.created_at]);
   const [expanded, setExpanded] = useState(false);
   const [copyState, setCopyState] = useState("idle");
 
@@ -87,7 +87,9 @@ function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
       <div className="stack" style={{ gap: "0.15rem" }}>
         <strong>{doc.filename}</strong>
         <div className="tiny muted" style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-          <span>Uploaded {created.toLocaleDateString()} {created.toLocaleTimeString()}</span>
+          <span>
+            Uploaded {created ? `${created.toLocaleDateString()} ${created.toLocaleTimeString()}` : "timestamp pending"}
+          </span>
           <span>Type: {doc.content_type || "unknown"}</span>
         </div>
         {doc.text ? (
@@ -156,9 +158,11 @@ export default function AdminDocumentsPage() {
   const visibleDocs = useMemo(() => {
     const sorted = [...filteredDocs];
     sorted.sort((a, b) => {
-      if (sort === "oldest") return new Date(a.created_at) - new Date(b.created_at);
       if (sort === "name") return a.filename.localeCompare(b.filename);
-      return new Date(b.created_at) - new Date(a.created_at);
+      const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+      if (sort === "oldest") return aDate - bDate;
+      return bDate - aDate;
     });
     return sorted;
   }, [filteredDocs, sort]);

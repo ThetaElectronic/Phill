@@ -1,5 +1,7 @@
 import AuthWall from "../../components/AuthWall";
+import ThemeToggle from "../../components/ThemeToggle";
 import { getSessionOrRedirect, serverFetchWithAuth } from "../../lib/session";
+import AiPanelWrapper from "./AiPanelWrapper";
 
 async function loadDashboardData(session) {
   try {
@@ -30,60 +32,49 @@ export default async function DashboardPage() {
     : 0;
 
   return (
-    <AuthWall
-      session={session}
-      title="Dashboard"
-      description="A quick glance at what matters for your team."
-    >
+    <AuthWall session={session} title="Phill AI" description="Your focused hub for chatting with Phill and managing training files.">
       <section className="stack" style={{ gap: "1rem" }}>
-        <div className="card glass stack" style={{ gap: "0.75rem" }}>
-          <div className="stack" style={{ gap: "0.25rem" }}>
-            <span className="pill pill-outline">Overview</span>
-            <h1 style={{ margin: 0 }}>Workspace status</h1>
+        <div className="card glass stack" style={{ gap: "0.5rem" }}>
+          <div className="stack" style={{ gap: "0.15rem" }}>
+            <h1 style={{ margin: 0 }}>Dashboard</h1>
             <p className="muted" style={{ margin: 0 }}>
-              Simple signals for your company. No extra banners or previews until you sign in.
+              Keep an eye on the essentials and jump straight into Phill AI. Dark mode and logout live here for quick access.
             </p>
           </div>
-          <div className="grid two-col" style={{ gap: "1rem" }}>
+          <div className="grid two-col" style={{ gap: "1rem", alignItems: "stretch" }}>
             <div className="card surface stack" style={{ gap: "0.35rem" }}>
               <span className="muted tiny">Open incidents</span>
               <strong style={{ fontSize: "1.6rem" }}>{openIncidents || "—"}</strong>
-              <span className="tiny muted">Company scoped.</span>
+              <span className="tiny muted">Company scoped</span>
             </div>
             <div className="card surface stack" style={{ gap: "0.35rem" }}>
-              <span className="muted tiny">Documents</span>
+              <span className="muted tiny">Training documents</span>
               <strong style={{ fontSize: "1.6rem" }}>{data.documents?.length ?? "—"}</strong>
-              <span className="tiny muted">Latest uploads only.</span>
+              <span className="tiny muted">Latest uploads</span>
             </div>
+          </div>
+          <div className="chip-row" style={{ justifyContent: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
+            <ThemeToggle className="secondary" />
+            <a className="secondary" href="/account">Account</a>
+            {data.profile?.role === "admin" && (
+              <a className="secondary" href="/admin">
+                Admin workspace
+              </a>
+            )}
+            <a className="secondary" href="/documents">Training files</a>
           </div>
           {data.error && <div className="status-error">{data.error}</div>}
         </div>
 
-          <div className="card glass stack" style={{ gap: "0.5rem" }}>
-            <h2 style={{ margin: 0 }}>Quick links</h2>
-            <div className="pill-row">
-            <a className="pill" href="/incidents/create">
-              New incident
-            </a>
-            <a className="pill" href="/documents">
-              Documents
-            </a>
-              <a className="pill" href="/ai">
-                AI assistant
-              </a>
-              <a className="pill" href="/tickets">
-                Tickets
-              </a>
-              <a className="pill pill-soft" href="/account">
-                Account
-              </a>
-              {data.profile?.role === "admin" && (
-                <a className="pill pill-outline" href="/admin">
-                  Admin
-                </a>
-              )}
-            </div>
+        <div className="card glass stack" style={{ gap: "0.75rem" }}>
+          <div className="stack" style={{ gap: "0.2rem" }}>
+            <h2 style={{ margin: 0 }}>Phill AI workspace</h2>
+            <p className="muted" style={{ margin: 0 }}>
+              Chat with Phill, attach training files, and persist helpful responses without leaving the dashboard.
+            </p>
           </div>
+          <AiPanelWrapper session={session} />
+        </div>
       </section>
     </AuthWall>
   );

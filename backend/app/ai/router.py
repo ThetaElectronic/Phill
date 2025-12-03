@@ -1,4 +1,5 @@
 import io
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -218,13 +219,16 @@ def _document_payload(record: AiMemory) -> DocumentPayload:
     data: dict[str, Any] = record.data or {}
     scope = data.get("scope") or "company"
     excerpt = data.get("excerpt") or (data.get("text") or "")[:300]
+    created_at = record.created_at
+    if created_at is None:
+        created_at = datetime.utcnow()
 
     return DocumentPayload(
         id=record.id,
         filename=data.get("filename") or "document",
         content_type=data.get("content_type"),
         size=int(data.get("size") or 0),
-        created_at=record.created_at,
+        created_at=created_at,
         excerpt=excerpt,
         text=data.get("text"),
         scope=scope,
