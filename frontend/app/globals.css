@@ -196,6 +196,30 @@ main {
   box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
 }
 
+.chip-active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+  box-shadow: none;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  display: inline-block;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.06);
+}
+
+.status-dot.dot-on {
+  background: #22c55e;
+}
+
+.status-dot.dot-off {
+  background: #cbd5e1;
+}
+
 .main-content {
   padding: 1.5rem 1.25rem 2rem;
 }
