@@ -196,6 +196,13 @@ main {
   box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
 }
 
+.chip-active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+  box-shadow: none;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;

@@ -1,5 +1,5 @@
 import "./globals.css";
-import SessionIndicator from "../components/SessionIndicator";
+import NavBar from "../components/NavBar";
 import { getServerSession, serverFetchWithAuth } from "../lib/session";
 
 export const metadata = {
@@ -39,32 +39,7 @@ export default async function RootLayout({ children }) {
     <html lang="en">
       <body>
         <div className="bg-grid gradient-shell">
-          {isAuthed && (
-            <header className="glass">
-              <div className="shell brand-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                <div className="brand-mark" style={{ gap: "0.35rem" }}>
-                  <div className="orb" aria-hidden />
-                  <div className="stack" style={{ gap: "0.1rem" }}>
-                    <div className="pill">Phill</div>
-                    <span className="muted tiny">Calm, focused workspace</span>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <nav className="nav chip-row" aria-label="Primary navigation">
-                    {navLinks.map((link) => (
-                      <a key={link.href} className="chip" href={link.href}>
-                        {link.label}
-                      </a>
-                    ))}
-                  </nav>
-                  <div className="stack" style={{ gap: "0.1rem", alignItems: "flex-end" }}>
-                    {userLabel && <span className="tiny muted">Signed in as</span>}
-                    <SessionIndicator label={userLabel} compact />
-                  </div>
-                </div>
-              </div>
-            </header>
-          )}
+          {isAuthed && <NavBar navLinks={navLinks} userLabel={userLabel} />}
           <main className={`main-content ${isAuthed ? "" : "auth-only"}`}>
             <div className="shell auth-shell">{children}</div>
           </main>
