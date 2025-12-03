@@ -20,9 +20,15 @@ export default function NavBar({ navLinks, userLabel }) {
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <nav className="nav chip-row" aria-label="Primary navigation">
             {navLinks.map((link) => {
-              const active = pathname === link.href;
+              const active =
+                pathname === link.href || pathname.startsWith(`${link.href}/`);
               return (
-                <Link key={link.href} className={`chip${active ? " chip-active" : ""}`} href={link.href}>
+                <Link
+                  key={link.href}
+                  className={`chip${active ? " chip-active" : ""}`}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                >
                   {link.label}
                 </Link>
               );
