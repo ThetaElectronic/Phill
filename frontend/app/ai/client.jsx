@@ -24,6 +24,7 @@ export default function AiClient({ session }) {
   const [docScope, setDocScope] = useState("company");
   const fileInputRef = useRef(null);
   const messageListRef = useRef(null);
+  const [copiedMessage, setCopiedMessage] = useState(null);
 
   useEffect(() => {
     setStatus((prev) => (prev.state === "idle" ? prev : prev));
@@ -124,6 +125,19 @@ export default function AiClient({ session }) {
     setMeta(null);
     setInput("");
     setStatus({ state: "idle" });
+    setCopiedMessage(null);
+  };
+
+  const copyMessage = async (content, key) => {
+    if (!content) return;
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessage(key);
+      setTimeout(() => setCopiedMessage(null), 2000);
+    } catch (error) {
+      console.error("Copy failed", error);
+      setCopiedMessage("error");
+    }
   };
 
   const uploadDocument = async (file) => {
@@ -422,16 +436,28 @@ export default function AiClient({ session }) {
 
             {messages.length > 0 && (
               <div className="stack" style={{ gap: "0.5rem", maxHeight: "320px", overflow: "auto" }} ref={messageListRef}>
-                {messages.map((msg, idx) => (
-                  <div key={`${msg.role}-${idx}`} className="card glass">
-                    <div className="badge-list" style={{ marginBottom: "0.25rem" }}>
-                      <span className="pill">{msg.role}</span>
+                {messages.map((msg, idx) => {
+                  const key = `${msg.role}-${idx}`;
+                  return (
+                    <div key={key} className="card glass stack" style={{ gap: "0.35rem" }}>
+                      <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                        <div className="badge-list" style={{ marginBottom: "0.25rem" }}>
+                          <span className="pill">{msg.role}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => copyMessage(msg.content, key)}
+                        >
+                          {copiedMessage === key ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                      <div className="tiny" style={{ whiteSpace: "pre-wrap" }}>
+                        {msg.content}
+                      </div>
                     </div>
-                    <div className="tiny" style={{ whiteSpace: "pre-wrap" }}>
-                      {msg.content}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
