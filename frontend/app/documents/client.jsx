@@ -51,6 +51,7 @@ export default function DocumentsClient({ session }) {
   const [documents, setDocuments] = useState([]);
   const [state, setState] = useState({ status: "idle" });
   const [filter, setFilter] = useState("all");
+  const [lastLoaded, setLastLoaded] = useState(null);
 
   const filteredDocs = useMemo(() => {
     if (filter === "all") return documents;
@@ -74,6 +75,7 @@ export default function DocumentsClient({ session }) {
         if (!cancelled) {
           setDocuments(Array.isArray(data) ? data : []);
           setState({ status: "success" });
+          setLastLoaded(new Date());
         }
       } catch (error) {
         if (!cancelled)
@@ -85,6 +87,26 @@ export default function DocumentsClient({ session }) {
       cancelled = true;
     };
   }, [tokens]);
+
+  const handleRefresh = async () => {
+    if (!tokens) return;
+    setState({ status: "loading" });
+    try {
+      const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        const message = payload?.detail || `Request failed (${res.status})`;
+        setState({ status: "error", message });
+        return;
+      }
+      const data = await res.json();
+      setDocuments(Array.isArray(data) ? data : []);
+      setState({ status: "success" });
+      setLastLoaded(new Date());
+    } catch (error) {
+      setState({ status: "error", message: error instanceof Error ? error.message : "Unable to load documents" });
+    }
+  };
 
   return (
     <AuthWall session={tokens} title="Training documents" description="Signed-in users can review uploaded AI files.">
@@ -119,8 +141,16 @@ export default function DocumentsClient({ session }) {
               ))}
             </div>
             <div className="chip-row" style={{ alignItems: "center", gap: "0.35rem" }}>
+              {lastLoaded && (
+                <span className="tiny muted" aria-live="polite">
+                  Updated {lastLoaded.toLocaleTimeString()}
+                </span>
+              )}
               <span className="muted tiny">{documents.length ? `${documents.length} total` : "No documents"}</span>
-              <button type="button" className="secondary" onClick={() => setFilter("all")}>
+              <button type="button" className="secondary" onClick={handleRefresh} disabled={state.status === "loading"}>
+                Refresh
+              </button>
+              <button type="button" className="ghost" onClick={() => setFilter("all")}>
                 Reset filters
               </button>
             </div>
