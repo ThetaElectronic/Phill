@@ -161,6 +161,7 @@ export default function AdminUsersPage() {
 
   return (
     <AdminWall title="Admin users" description="Manage team accounts within your tenant.">
+    <AuthWall title="Admin users" description="Manage team accounts within your tenant.">
       <section className="stack" style={{ gap: "1rem", maxWidth: "1080px" }}>
         <div className="stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
