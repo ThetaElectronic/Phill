@@ -17,11 +17,14 @@ export default function AiClient({ session }) {
   const [meta, setMeta] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [documentFilter, setDocumentFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
   const [docStatus, setDocStatus] = useState({ state: "idle" });
   const [docScope, setDocScope] = useState("company");
+  const [documentsLoadedAt, setDocumentsLoadedAt] = useState(null);
   const fileInputRef = useRef(null);
   const messageListRef = useRef(null);
   const [copiedMessage, setCopiedMessage] = useState(null);
@@ -61,50 +64,7 @@ export default function AiClient({ session }) {
       }
       const data = await res.json();
       setDocuments(Array.isArray(data) ? data : []);
-      setDocStatus({ state: "idle" });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to load documents";
-      setDocStatus({ state: "error", message });
-    } finally {
-      setDocumentsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!messageListRef.current) return;
-    const last = messageListRef.current.lastElementChild;
-    if (last) last.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    const loadAiStatus = async () => {
-      try {
-        const res = await fetch(apiUrl("/ai/status"));
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data && typeof data === "object") setAiStatus(data);
-      } catch (error) {
-        console.error("Unable to load AI status", error);
-      }
-    };
-
-    loadAiStatus();
-    loadDocuments();
-  }, [tokens]);
-
-  const loadDocuments = async () => {
-    if (!tokens) return;
-    setDocumentsLoading(true);
-    setDocStatus((prev) => (prev.state === "loading" ? prev : { state: "idle" }));
-    try {
-      const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
-      if (!res.ok) {
-        const detail = await res.text();
-        setDocStatus({ state: "error", message: detail || "Unable to load documents" });
-        return;
-      }
-      const data = await res.json();
-      setDocuments(Array.isArray(data) ? data : []);
+      setDocumentsLoadedAt(new Date());
       setDocStatus({ state: "idle" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load documents";
@@ -265,14 +225,33 @@ export default function AiClient({ session }) {
 
   const aiReady = aiStatus?.ok !== false;
   const filteredDocs = Array.isArray(documents)
-    ? documents.filter((doc) =>
-        documentFilter === "all"
-          ? true
-          : documentFilter === "company"
-            ? doc.scope !== "global"
-            : doc.scope === "global",
-      )
+    ? documents
+        .filter((doc) =>
+          documentFilter === "all"
+            ? true
+            : documentFilter === "company"
+              ? doc.scope !== "global"
+              : doc.scope === "global",
+        )
+        .filter((doc) => {
+          if (!searchTerm.trim()) return true;
+          const haystack = `${doc.filename || ""} ${doc.excerpt || ""} ${doc.scope || ""} ${doc.created_at || ""}`.toLowerCase();
+          return haystack.includes(searchTerm.toLowerCase());
+        })
+        .sort((a, b) => {
+          const newerFirst = sortBy === "newest";
+          if (sortBy === "name") {
+            return (a.filename || "").localeCompare(b.filename || "");
+          }
+          const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return newerFirst ? bDate - aDate : aDate - bDate;
+        })
     : [];
+
+  const lastLoadedLabel = documentsLoadedAt
+    ? documentsLoadedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+    : null;
 
   return (
     <AuthWall session={tokens} title="AI chat is protected" description="Sign in to use Phill AI with tenant-scoped memory.">
@@ -307,39 +286,69 @@ export default function AiClient({ session }) {
                 >
                   {documentsLoading ? "Refreshing…" : "Refresh"}
                 </button>
-                <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
-                  <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
-                    <input
-                      type="radio"
-                      name="doc-scope"
-                      value="company"
-                      checked={docScope === "company"}
-                      onChange={(event) => setDocScope(event.target.value)}
-                    />
-                    <span className="tiny muted">Company</span>
-                  </label>
-                  <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
-                    <input
-                      type="radio"
-                      name="doc-scope"
-                      value="global"
-                      checked={docScope === "global"}
-                      onChange={(event) => setDocScope(event.target.value)}
-                    />
-                    <span className="tiny muted">Global</span>
-                  </label>
-                  <select
-                    className="secondary"
-                    value={documentFilter}
-                    onChange={(event) => setDocumentFilter(event.target.value)}
-                  >
-                    <option value="all">All</option>
-                    <option value="company">Company</option>
-                    <option value="global">Global</option>
-                  </select>
-                </div>
+                {lastLoadedLabel && <span className="tiny muted">Updated {lastLoadedLabel}</span>}
               </div>
             </header>
+            <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+              <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
+                <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
+                  <input
+                    type="radio"
+                    name="doc-scope"
+                    value="company"
+                    checked={docScope === "company"}
+                    onChange={(event) => setDocScope(event.target.value)}
+                  />
+                  <span className="tiny muted">Company</span>
+                </label>
+                <label className="chip-row" style={{ gap: "0.25rem", alignItems: "center" }}>
+                  <input
+                    type="radio"
+                    name="doc-scope"
+                    value="global"
+                    checked={docScope === "global"}
+                    onChange={(event) => setDocScope(event.target.value)}
+                  />
+                  <span className="tiny muted">Global</span>
+                </label>
+                <select
+                  className="secondary"
+                  value={documentFilter}
+                  onChange={(event) => setDocumentFilter(event.target.value)}
+                >
+                  <option value="all">All scopes</option>
+                  <option value="company">Company</option>
+                  <option value="global">Global</option>
+                </select>
+              </div>
+              <input
+                className="secondary"
+                type="search"
+                placeholder="Search documents"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                style={{ minWidth: "140px" }}
+              />
+              <select className="secondary" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="name">Name</option>
+              </select>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  setDocumentFilter("all");
+                  setSearchTerm("");
+                  setSortBy("newest");
+                }}
+              >
+                Reset
+              </button>
+              <span className="tiny muted">
+                Showing {filteredDocs.length} of {documents.length} uploads
+              </span>
+            </div>
             <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
               <input
                 ref={fileInputRef}
