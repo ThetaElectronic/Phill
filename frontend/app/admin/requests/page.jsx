@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import AuthWall from "../../../components/AuthWall";
 import { fetchWithAuth } from "../../../lib/api";
 
 function RequestsCard({ title, description, items, loading, error }) {
   return (
-    <section className="glass stack" style={{ gap: "0.75rem" }}>
+    <section className="card surface stack" style={{ gap: "0.75rem" }}>
       <div className="stack" style={{ gap: "0.25rem" }}>
         <div className="badge-list">
           <span className="pill">Admin</span>
@@ -37,10 +38,6 @@ function RequestsCard({ title, description, items, loading, error }) {
                 <div className="strong">{item.email}</div>
                 {item.note && <div className="muted tiny">Note: {item.note}</div>}
                 <div className="muted tiny">{new Date(item.created_at).toLocaleString()}</div>
-              </div>
-              <div className="stack" style={{ alignItems: "flex-end", gap: "0.1rem" }}>
-                {item.ip_address && <span className="pill pill-outline">IP {item.ip_address}</span>}
-                {item.user_agent && <span className="muted tiny truncate">{item.user_agent}</span>}
               </div>
             </div>
           ))}
@@ -97,30 +94,35 @@ export default function AdminRequestsPage() {
   }, []);
 
   return (
-    <div className="stack" style={{ gap: "1rem" }}>
-      <header className="stack" style={{ gap: "0.25rem" }}>
-        <div className="pill">Admin</div>
-        <h1 style={{ margin: 0 }}>Auth requests</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          Review access requests and password reset submissions captured from the login page.
-        </p>
-      </header>
-      <div className="grid two">
-        <RequestsCard
-          title="Access requests"
-          description="Requests to gain access with optional notes for follow-up."
-          items={accessRequests}
-          loading={loading}
-          error={error}
-        />
-        <RequestsCard
-          title="Password reset requests"
-          description="Recent reset submissions with metadata for auditing."
-          items={resetRequests}
-          loading={loading}
-          error={error}
-        />
+    <AuthWall title="Admin requests" description="View access and password reset submissions.">
+      <div className="stack" style={{ gap: "1rem" }}>
+        <header className="stack" style={{ gap: "0.35rem" }}>
+          <div className="badge-list">
+            <span className="pill">Admin</span>
+            <span className="pill pill-outline">Requests</span>
+          </div>
+          <h1 style={{ margin: 0 }}>Auth requests</h1>
+          <p className="muted" style={{ margin: 0 }}>
+            Review access requests and password reset submissions captured from the login page.
+          </p>
+        </header>
+        <div className="grid two-col" style={{ gap: "1rem" }}>
+          <RequestsCard
+            title="Access requests"
+            description="Requests to gain access with optional notes for follow-up."
+            items={accessRequests}
+            loading={loading}
+            error={error}
+          />
+          <RequestsCard
+            title="Password reset requests"
+            description="Recent reset submissions with metadata for auditing."
+            items={resetRequests}
+            loading={loading}
+            error={error}
+          />
+        </div>
       </div>
-    </div>
+    </AuthWall>
   );
 }
