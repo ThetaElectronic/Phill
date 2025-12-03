@@ -1,6 +1,6 @@
 import "./globals.css";
 import SessionIndicator from "../components/SessionIndicator";
-import { getServerSession } from "../lib/session";
+import { getServerSession, serverFetchWithAuth } from "../lib/session";
 
 export const metadata = {
   title: "Phill Platform",
@@ -10,6 +10,20 @@ export const metadata = {
 export default async function RootLayout({ children }) {
   const session = getServerSession();
   const isAuthed = Boolean(session?.access_token);
+
+  let profile = null;
+  if (isAuthed) {
+    try {
+      const res = await serverFetchWithAuth("/api/users/me", session);
+      if (res.ok) {
+        profile = await res.json();
+      }
+    } catch (err) {
+      console.error("Failed to load profile for header nav", err);
+    }
+  }
+
+  const isAdmin = profile?.role === "admin";
 
   return (
     <html lang="en">
@@ -31,10 +45,12 @@ export default async function RootLayout({ children }) {
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <nav className="nav chip-row">
                     <a className="chip" href="/dashboard">Dashboard</a>
-                    <a className="chip" href="/incidents/create">Incidents</a>
                     <a className="chip" href="/documents">Documents</a>
                     <a className="chip" href="/ai">Phill AI</a>
-                    <a className="chip" href="/admin/requests">Admin</a>
+                    <a className="chip" href="/account">Account</a>
+                    {isAdmin && (
+                      <a className="chip" href="/admin">Admin</a>
+                    )}
                   </nav>
                   <SessionIndicator />
                 </div>
