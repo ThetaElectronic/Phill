@@ -12,6 +12,12 @@ const filters = [
   { value: "global", label: "Global" },
 ];
 
+const sorters = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "name", label: "Name" },
+];
+
 function formatBytes(bytes) {
   if (!bytes && bytes !== 0) return "?";
   const units = [
@@ -53,6 +59,7 @@ export default function DocumentsClient({ session }) {
   const [filter, setFilter] = useState("all");
   const [lastLoaded, setLastLoaded] = useState(null);
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("newest");
 
   const filteredDocs = useMemo(() => {
     const scoped = filter === "all" ? documents : documents.filter((doc) => doc.scope === filter);
@@ -63,6 +70,16 @@ export default function DocumentsClient({ session }) {
       return haystacks.some((value) => (value ? String(value).toLowerCase().includes(term) : false));
     });
   }, [documents, filter, query]);
+
+  const visibleDocs = useMemo(() => {
+    const sorted = [...filteredDocs];
+    sorted.sort((a, b) => {
+      if (sort === "oldest") return new Date(a.created_at) - new Date(b.created_at);
+      if (sort === "name") return a.filename.localeCompare(b.filename);
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+    return sorted;
+  }, [filteredDocs, sort]);
 
   useEffect(() => {
     if (!tokens) return;
@@ -148,6 +165,20 @@ export default function DocumentsClient({ session }) {
                 ))}
               </div>
               <div className="chip-row" style={{ alignItems: "center", gap: "0.35rem" }}>
+                <div className="chip-row" role="radiogroup" aria-label="Sort documents">
+                  {sorters.map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={`chip chip-soft${sort === item.value ? " chip-active" : ""}`}
+                      onClick={() => setSort(item.value)}
+                      role="radio"
+                      aria-checked={sort === item.value}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
                 {lastLoaded && (
                   <span className="tiny muted" aria-live="polite">
                     Updated {lastLoaded.toLocaleTimeString()}
@@ -163,6 +194,7 @@ export default function DocumentsClient({ session }) {
                   onClick={() => {
                     setFilter("all");
                     setQuery("");
+                    setSort("newest");
                   }}
                 >
                   Reset filters
@@ -186,13 +218,13 @@ export default function DocumentsClient({ session }) {
           {state.status === "loading" && <div className="status-info">Loading documents…</div>}
           {state.status === "error" && <div className="status-error">{state.message || "Unable to load documents"}</div>}
 
-          {state.status === "success" && filteredDocs.length === 0 && (
+          {state.status === "success" && visibleDocs.length === 0 && (
             <div className="status-info">No documents match this filter.</div>
           )}
 
-          {state.status === "success" && filteredDocs.length > 0 && (
+          {state.status === "success" && visibleDocs.length > 0 && (
             <div className="stack" style={{ gap: "0.75rem" }}>
-              {filteredDocs.map((doc) => (
+              {visibleDocs.map((doc) => (
                 <DocumentCard key={doc.id} doc={doc} />
               ))}
             </div>
