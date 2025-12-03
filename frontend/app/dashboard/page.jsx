@@ -33,7 +33,7 @@ export default async function DashboardPage() {
     <AuthWall
       session={session}
       title="Dashboard"
-      description="Minimal, glassy overview that stays empty until data is available."
+      description="A quick glance at what matters for your team."
     >
       <section className="stack" style={{ gap: "1rem" }}>
         <div className="card glass stack" style={{ gap: "0.75rem" }}>
@@ -48,12 +48,12 @@ export default async function DashboardPage() {
             <div className="card surface stack" style={{ gap: "0.35rem" }}>
               <span className="muted tiny">Open incidents</span>
               <strong style={{ fontSize: "1.6rem" }}>{openIncidents || "—"}</strong>
-              <span className="tiny muted">Scoped to your company and role.</span>
+              <span className="tiny muted">Company scoped.</span>
             </div>
             <div className="card surface stack" style={{ gap: "0.35rem" }}>
               <span className="muted tiny">Documents</span>
               <strong style={{ fontSize: "1.6rem" }}>{data.documents?.length ?? "—"}</strong>
-              <span className="tiny muted">Latest uploads only, no cross-tenant leaks.</span>
+              <span className="tiny muted">Latest uploads only.</span>
             </div>
           </div>
           {data.error && <div className="status-error">{data.error}</div>}
