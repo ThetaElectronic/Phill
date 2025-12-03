@@ -33,8 +33,10 @@ function formatBytes(bytes) {
 
 function DocumentCard({ doc }) {
   const created = useMemo(() => new Date(doc.created_at), [doc.created_at]);
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div className="card surface stack" style={{ gap: "0.35rem" }}>
+    <div className="card surface stack" style={{ gap: "0.5rem" }}>
       <div className="chip-row" style={{ alignItems: "center", justifyContent: "space-between" }}>
         <div className="badge-list" style={{ gap: "0.35rem" }}>
           <span className="pill">{doc.filename}</span>
@@ -47,7 +49,39 @@ function DocumentCard({ doc }) {
           {created.toLocaleDateString()} {created.toLocaleTimeString()}
         </span>
       </div>
-      {doc.excerpt ? <p className="tiny muted">{doc.excerpt}</p> : <p className="tiny muted">No preview available.</p>}
+      <div className="stack" style={{ gap: "0.25rem" }}>
+        {doc.text ? (
+          <>
+            <p className="tiny muted" style={{ margin: 0 }}>
+              {expanded ? "Stored training text" : "Excerpt"}
+            </p>
+            <div
+              className="tiny muted card"
+              style={{
+                whiteSpace: "pre-wrap",
+                margin: 0,
+                maxHeight: expanded ? "24rem" : "6rem",
+                overflow: "auto",
+              }}
+            >
+              {expanded ? doc.text : doc.excerpt || doc.text.slice(0, 300)}
+            </div>
+            <div className="chip-row" style={{ justifyContent: "flex-end" }}>
+              <button type="button" className="ghost" onClick={() => setExpanded((prev) => !prev)}>
+                {expanded ? "Hide text" : "View full text"}
+              </button>
+            </div>
+          </>
+        ) : doc.excerpt ? (
+          <p className="tiny muted" style={{ margin: 0 }}>
+            {doc.excerpt}
+          </p>
+        ) : (
+          <p className="tiny muted" style={{ margin: 0 }}>
+            No preview available.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -66,7 +100,7 @@ export default function DocumentsClient({ session }) {
     if (!query.trim()) return scoped;
     const term = query.trim().toLowerCase();
     return scoped.filter((doc) => {
-      const haystacks = [doc.filename, doc.excerpt, doc.scope, doc.created_at];
+      const haystacks = [doc.filename, doc.excerpt, doc.text, doc.scope, doc.created_at];
       return haystacks.some((value) => (value ? String(value).toLowerCase().includes(term) : false));
     });
   }, [documents, filter, query]);

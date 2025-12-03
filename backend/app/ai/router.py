@@ -226,6 +226,7 @@ def _document_payload(record: AiMemory) -> DocumentPayload:
         size=int(data.get("size") or 0),
         created_at=record.created_at,
         excerpt=excerpt,
+        text=data.get("text"),
         scope=scope,
         owner_company_id=record.company_id,
     )

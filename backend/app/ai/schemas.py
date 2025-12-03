@@ -29,6 +29,7 @@ class DocumentPayload(BaseModel):
     size: int
     created_at: datetime
     excerpt: str | None = None
+    text: str | None = None
     scope: Literal["company", "global"] = "company"
     owner_company_id: str | None = None
 

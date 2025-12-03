@@ -37,9 +37,10 @@ function SkeletonCard() {
 
 function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
   const created = useMemo(() => new Date(doc.created_at), [doc.created_at]);
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="card surface stack" style={{ gap: "0.35rem" }}>
+    <div className="card surface stack" style={{ gap: "0.5rem" }}>
       <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <div className="badge-list" style={{ gap: "0.35rem" }}>
           <span className="pill">AI</span>
@@ -63,7 +64,29 @@ function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
           <span>Uploaded {created.toLocaleDateString()} {created.toLocaleTimeString()}</span>
           <span>Type: {doc.content_type || "unknown"}</span>
         </div>
-        {doc.excerpt && <p className="tiny muted">Excerpt: {doc.excerpt}</p>}
+        {doc.text ? (
+          <div className="stack" style={{ gap: "0.15rem" }}>
+            <span className="tiny muted">{expanded ? "Stored text" : "Excerpt"}</span>
+            <div
+              className="tiny muted card"
+              style={{
+                whiteSpace: "pre-wrap",
+                maxHeight: expanded ? "20rem" : "5.5rem",
+                overflow: "auto",
+                margin: 0,
+              }}
+            >
+              {expanded ? doc.text : doc.excerpt || doc.text.slice(0, 300)}
+            </div>
+            <div className="chip-row" style={{ justifyContent: "flex-end" }}>
+              <button type="button" className="ghost" onClick={() => setExpanded((prev) => !prev)}>
+                {expanded ? "Hide text" : "View full text"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          doc.excerpt && <p className="tiny muted">Excerpt: {doc.excerpt}</p>
+        )}
       </div>
       <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
         <label className="stack" style={{ gap: "0.15rem" }}>
