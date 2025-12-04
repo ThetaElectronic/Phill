@@ -178,10 +178,26 @@ header {
   border: 1px dashed var(--border);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.5);
+  cursor: default;
 }
 
 .nav-actions {
   flex-wrap: wrap;
+}
+
+.nav-divider {
+  width: 1px;
+  align-self: stretch;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0) 0%,
+    rgba(15, 23, 42, 0.1) 18%,
+    rgba(15, 23, 42, 0.18) 50%,
+    rgba(15, 23, 42, 0.1) 82%,
+    rgba(15, 23, 42, 0) 100%
+  );
+  border-radius: 999px;
+  min-height: 48px;
 }
 
 .nav-overlay {
@@ -284,6 +300,7 @@ main {
   align-items: center;
   gap: 0.4rem;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .chip-nav {
@@ -309,6 +326,16 @@ main {
   color: #fff;
   text-decoration: none;
   box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
+}
+
+.chip:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4), 0 12px 30px rgba(37, 99, 235, 0.25);
+}
+
+.chip-label {
+  font-weight: 700;
 }
 
 .chip-active {
