@@ -41,7 +41,7 @@ export default function AiClient({ session }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState({ state: "idle" });
-  const [aiStatus, setAiStatus] = useState({ ok: true });
+  const [aiStatus, setAiStatus] = useState(null);
   const [useMemory, setUseMemory] = useState(false);
   const [meta, setMeta] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -90,11 +90,16 @@ export default function AiClient({ session }) {
     const loadAiStatus = async () => {
       try {
         const res = await fetch(apiUrl("/ai/status"));
-        if (!res.ok) return;
+        if (!res.ok) {
+          const detail = await res.text();
+          setAiStatus({ ok: false, detail: detail || "Unable to load AI status" });
+          return;
+        }
         const data = await res.json();
         if (data && typeof data === "object") setAiStatus(data);
       } catch (error) {
         console.error("Unable to load AI status", error);
+        setAiStatus({ ok: false, detail: "Unable to reach AI status" });
       }
     };
 
@@ -279,7 +284,9 @@ export default function AiClient({ session }) {
     }
   };
 
-  const aiReady = aiStatus?.ok !== false;
+  const aiReady = aiStatus?.ok === true;
+  const aiTone = aiStatus ? (aiReady ? "ok" : "error") : "idle";
+  const aiLabel = aiStatus ? (aiReady ? "Ready" : "Needs setup") : "Checking";
   const aiCheckedLabel = formatDateTime(aiStatus?.checked_at, null);
   const filteredDocs = Array.isArray(documents)
     ? documents
@@ -314,9 +321,7 @@ export default function AiClient({ session }) {
         <div className="card glass stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
             <span className="pill">Phill AI</span>
-            <span className={`status-chip ${aiReady ? "ok" : "error"}`}>
-              {aiReady ? "Ready" : "Needs setup"}
-            </span>
+            <span className={`status-chip ${aiTone}`}>{aiLabel}</span>
             {aiStatus?.model && <span className="pill pill-outline">{aiStatus.model}</span>}
           </div>
           <div className="stack" style={{ gap: "0.15rem" }}>
@@ -325,7 +330,7 @@ export default function AiClient({ session }) {
               Keep uploads tidy, choose scope, attach what you need, and save responses to your personal memory when helpful.
             </p>
           </div>
-          {!aiReady && (
+          {aiStatus?.ok === false && (
             <div className="status-error">
               {aiStatus?.detail || "AI is not ready yet. Add your OpenAI key and model in the environment."}
             </div>
