@@ -17,16 +17,26 @@ export default function NavBar({ navLinks, userLabel }) {
     setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    const handleKey = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
   return (
     <header className="glass">
       <div className="shell brand-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <div className="brand-mark" style={{ gap: "0.35rem" }}>
+        <Link href="/dashboard" className="brand-mark" style={{ gap: "0.35rem" }}>
           <Image src="/phill-logo.svg" width={42} height={42} alt="Phill logo" className="brand-logo" />
           <div className="stack" style={{ gap: "0.1rem" }}>
             <strong>Phill</strong>
             <span className="muted tiny">Focused AI workspace</span>
           </div>
-        </div>
+        </Link>
 
         <button
           type="button"
@@ -39,6 +49,8 @@ export default function NavBar({ navLinks, userLabel }) {
           <span />
           <span />
         </button>
+
+        {open && <button type="button" className="nav-overlay" aria-label="Close navigation" onClick={() => setOpen(false)} />}
 
         <div className={`nav-wrap${open ? " open" : ""}`}>
           <nav className="nav chip-row" aria-label="Primary navigation">

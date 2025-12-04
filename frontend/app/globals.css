@@ -165,6 +165,10 @@ header {
   flex-wrap: wrap;
 }
 
+.nav-overlay {
+  display: none;
+}
+
 .nav-toggle {
   display: none;
   flex-direction: column;
@@ -979,10 +983,19 @@ form {
     background: var(--card);
     border-bottom: 1px solid var(--border);
     box-shadow: 0 24px 50px rgba(0, 0, 0, 0.1);
+    z-index: 10;
   }
 
   .nav-wrap.open {
     display: flex;
+  }
+
+  .nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    z-index: 9;
   }
 
   .nav-toggle {
