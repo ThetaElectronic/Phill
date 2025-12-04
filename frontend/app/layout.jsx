@@ -49,6 +49,29 @@ export default async function RootLayout({ children }) {
   }
   const userLabel = profile?.name || profile?.email || tokenPayload?.email || tokenPayload?.sub;
 
+  let profile = null;
+  if (isAuthed) {
+    try {
+      const res = await serverFetchWithAuth("/api/users/me", session);
+      if (res.ok) {
+        profile = await res.json();
+      }
+    } catch (err) {
+      console.error("Failed to load profile for header nav", err);
+    }
+  }
+
+  const isAdmin = profile?.role === "admin" || profile?.role === "founder";
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/documents", label: "Documents" },
+    { href: "/account", label: "Account" },
+  ];
+  if (isAdmin) {
+    navLinks.push({ href: "/admin", label: "Admin" });
+  }
+  const userLabel = profile?.name || profile?.email;
+
   return (
     <html lang="en">
       <head>
