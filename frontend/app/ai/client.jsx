@@ -37,6 +37,11 @@ export default function AiClient({ session }) {
   }, [messages]);
 
   useEffect(() => {
+    if (!Array.isArray(documents) || documents.length === 0) return;
+    setSelectedDocs((prev) => prev.filter((id) => documents.some((doc) => doc.id === id)));
+  }, [documents]);
+
+  useEffect(() => {
     const loadAiStatus = async () => {
       try {
         const res = await fetch(apiUrl("/ai/status"));
@@ -201,6 +206,11 @@ export default function AiClient({ session }) {
     }
   };
 
+  const clearSelectedDocs = () => {
+    setSelectedDocs([]);
+    setDocStatus((prev) => (prev.state === "error" ? { state: "idle" } : prev));
+  };
+
   const updateScope = async (doc, scope) => {
     if (!doc?.id) return;
     setDocStatus({ state: "loading", message: `Updating ${doc.filename || "document"}` });
@@ -347,6 +357,21 @@ export default function AiClient({ session }) {
               <span className="tiny muted">
                 Showing {filteredDocs.length} of {documents.length} uploads
               </span>
+            </div>
+            <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+              <span className="tiny muted">
+                {selectedDocs.length === 0
+                  ? "No attachments selected"
+                  : `${selectedDocs.length} attachment${selectedDocs.length === 1 ? "" : "s"} ready for chat`}
+              </span>
+              <button
+                type="button"
+                className="ghost"
+                onClick={clearSelectedDocs}
+                disabled={selectedDocs.length === 0}
+              >
+                Clear attachments
+              </button>
             </div>
             <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
               <input
