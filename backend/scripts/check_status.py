@@ -12,6 +12,8 @@ from typing import Iterable
 
 DEFAULT_BASE = "http://localhost:8001"
 DEFAULT_ENDPOINTS: tuple[str, ...] = ("/health", "/api/health")
+# Optional checks can be added to the list when flags are enabled
+AI_STATUS_ENDPOINT: str = "/api/ai/status"
 
 
 def fetch(url: str, *, insecure: bool = False, timeout: float = 5.0) -> tuple[int, str]:
@@ -81,11 +83,18 @@ def main() -> None:
         default=5.0,
         help="Request timeout in seconds (default 5.0)",
     )
+    parser.add_argument(
+        "--include-ai",
+        action="store_true",
+        help="Also probe /api/ai/status to confirm AI readiness",
+    )
     args = parser.parse_args()
 
     endpoints: tuple[str, ...] = DEFAULT_ENDPOINTS
     if args.include_healthz:
         endpoints = (*DEFAULT_ENDPOINTS, "/healthz")
+    if args.include_ai:
+        endpoints = (*endpoints, AI_STATUS_ENDPOINT)
 
     failures = check_endpoints(
         args.base_url, endpoints, insecure=args.insecure, timeout=args.timeout
