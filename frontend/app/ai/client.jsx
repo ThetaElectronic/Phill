@@ -42,6 +42,7 @@ export default function AiClient({ session }) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState({ state: "idle" });
   const [aiStatus, setAiStatus] = useState(null);
+  const [aiStatusState, setAiStatusState] = useState("loading");
   const [useMemory, setUseMemory] = useState(false);
   const [meta, setMeta] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -87,25 +88,29 @@ export default function AiClient({ session }) {
   }, [sortBy]);
 
   useEffect(() => {
-    const loadAiStatus = async () => {
-      try {
-        const res = await fetch(apiUrl("/ai/status"));
-        if (!res.ok) {
-          const detail = await res.text();
-          setAiStatus({ ok: false, detail: detail || "Unable to load AI status" });
-          return;
-        }
-        const data = await res.json();
-        if (data && typeof data === "object") setAiStatus(data);
-      } catch (error) {
-        console.error("Unable to load AI status", error);
-        setAiStatus({ ok: false, detail: "Unable to reach AI status" });
-      }
-    };
-
     loadAiStatus();
     loadDocuments();
   }, [tokens]);
+
+  const loadAiStatus = async () => {
+    setAiStatusState("loading");
+    try {
+      const res = await fetch(apiUrl("/ai/status"));
+      if (!res.ok) {
+        const detail = await res.text();
+        setAiStatus({ ok: false, detail: detail || "Unable to load AI status" });
+        setAiStatusState("error");
+        return;
+      }
+      const data = await res.json();
+      if (data && typeof data === "object") setAiStatus(data);
+      setAiStatusState("idle");
+    } catch (error) {
+      console.error("Unable to load AI status", error);
+      setAiStatus({ ok: false, detail: "Unable to reach AI status" });
+      setAiStatusState("error");
+    }
+  };
 
   const loadDocuments = async () => {
     if (!tokens) return;
@@ -285,9 +290,17 @@ export default function AiClient({ session }) {
   };
 
   const aiReady = aiStatus?.ok === true;
-  const aiTone = aiStatus ? (aiReady ? "ok" : "error") : "idle";
-  const aiLabel = aiStatus ? (aiReady ? "Ready" : "Needs setup") : "Checking";
-  const aiCheckedLabel = formatDateTime(aiStatus?.checked_at, null);
+  const aiTone =
+    aiStatusState === "loading" ? "idle" : aiReady ? "ok" : aiStatus ? "error" : "idle";
+  const aiLabel =
+    aiStatusState === "loading"
+      ? "Checking"
+      : aiReady
+        ? "Ready"
+        : aiStatus
+          ? "Needs setup"
+          : "Checking";
+  const aiCheckedLabel = formatDateTime(aiStatus?.checked_at, "Not yet checked");
   const filteredDocs = Array.isArray(documents)
     ? documents
         .filter((doc) =>
@@ -330,12 +343,22 @@ export default function AiClient({ session }) {
               Keep uploads tidy, choose scope, attach what you need, and save responses to your personal memory when helpful.
             </p>
           </div>
+          <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="ghost"
+              onClick={loadAiStatus}
+              disabled={aiStatusState === "loading"}
+            >
+              {aiStatusState === "loading" ? "Checking…" : "Refresh status"}
+            </button>
+            <span className="tiny muted">Last check {aiCheckedLabel}</span>
+          </div>
           {aiStatus?.ok === false && (
             <div className="status-error">
               {aiStatus?.detail || "AI is not ready yet. Add your OpenAI key and model in the environment."}
             </div>
           )}
-          {aiCheckedLabel && <span className="tiny muted">Checked {aiCheckedLabel}</span>}
         </div>
 
         <div className="grid two-col" style={{ gap: "1rem" }}>

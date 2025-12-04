@@ -238,6 +238,8 @@ AI_MODEL=gpt-4o-mini
 
 If you prefer to keep the key out of version control, set it directly in your hosting provider and restart the stack; the AI status endpoint (`/api/ai/status`) will confirm when credentials are in place.
 
+When you update the key or model, use the **Refresh status** control on the AI workspace (or query `/api/ai/status` directly) to confirm Phill can see the new configuration before sending chats.
+
 ### AI and SMTP readiness checks
 - `/api/ai/status` reports whether `OPENAI_API_KEY` and `AI_MODEL` are set so the AI UI can guide users before sending requests.
 - `/api/admin/email/status` (admin-only) surfaces whether SMTP credentials are present alongside the configured host and from-address; the `/admin/email` page reads it before enabling test sends.
