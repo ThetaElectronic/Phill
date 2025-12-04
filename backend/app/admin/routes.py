@@ -25,7 +25,7 @@ class AccessRequestRead(BaseModel):
     note: str | None = None
     ip_address: str | None = None
     user_agent: str | None = None
-    created_at: datetime
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -36,7 +36,7 @@ class PasswordResetRequestRead(BaseModel):
     email: EmailStr
     ip_address: str | None = None
     user_agent: str | None = None
-    created_at: datetime
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -52,9 +52,24 @@ def list_access_requests(
     session: Session = Depends(get_session),
     current_user=Depends(require_role(ROLE_ADMIN)),
 ):
-    return session.exec(
+    requests = session.exec(
         select(AccessRequest).order_by(AccessRequest.created_at.desc()).limit(limit)
     ).all()
+
+    missing_timestamp = False
+    now = datetime.utcnow()
+    for request in requests:
+        if request.created_at is None:
+            request.created_at = now
+            session.add(request)
+            missing_timestamp = True
+
+    if missing_timestamp:
+        session.commit()
+        for request in requests:
+            session.refresh(request)
+
+    return requests
 
 
 @router.get("/requests/password-resets", response_model=list[PasswordResetRequestRead])
@@ -63,11 +78,26 @@ def list_password_reset_requests(
     session: Session = Depends(get_session),
     current_user=Depends(require_role(ROLE_ADMIN)),
 ):
-    return session.exec(
+    requests = session.exec(
         select(PasswordResetRequest)
         .order_by(PasswordResetRequest.created_at.desc())
         .limit(limit)
     ).all()
+
+    missing_timestamp = False
+    now = datetime.utcnow()
+    for request in requests:
+        if request.created_at is None:
+            request.created_at = now
+            session.add(request)
+            missing_timestamp = True
+
+    if missing_timestamp:
+        session.commit()
+        for request in requests:
+            session.refresh(request)
+
+    return requests
 
 
 @router.post("/email/test")

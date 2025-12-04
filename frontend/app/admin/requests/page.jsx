@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
-import { formatDateTime, formatTime } from "../../../lib/dates";
+import { formatDateTime, formatTime, safeDate } from "../../../lib/dates";
 
 function RequestsCard({ title, description, items, loading, error, total }) {
   const filteredOut = typeof total === "number" && total > 0 && (items?.length || 0) === 0;
@@ -106,16 +106,21 @@ export default function AdminRequestsPage() {
   const normalizedSearch = search.trim().toLowerCase();
   const sortItems = (items) => {
     const sorted = [...items].sort((a, b) => {
-      const aDate = new Date(a.created_at || a.createdAt || "").getTime() || 0;
-      const bDate = new Date(b.created_at || b.createdAt || "").getTime() || 0;
-      if (sortBy === "oldest") return aDate - bDate;
-      return bDate - aDate;
+      const aDate = safeDate(a.created_at || a.createdAt);
+      const bDate = safeDate(b.created_at || b.createdAt);
+
+      const aTime = aDate?.getTime() ?? 0;
+      const bTime = bDate?.getTime() ?? 0;
+
+      if (sortBy === "oldest") return aTime - bTime;
+      return bTime - aTime;
     });
 
     if (!normalizedSearch) return sorted;
 
     return sorted.filter((item) => {
-      const haystack = `${item.email || ""} ${item.note || ""} ${item.created_at || ""}`.toLowerCase();
+      const created = formatDateTime(item.created_at || item.createdAt || "");
+      const haystack = `${item.email || ""} ${item.note || ""} ${created || ""}`.toLowerCase();
       return haystack.includes(normalizedSearch);
     });
   };
