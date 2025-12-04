@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { formatDateTime, safeDate } from "../lib/dates";
+
 import { apiUrl, getApiBase } from "../lib/api";
 import { clearTokens, loadTokens } from "../lib/auth";
 
@@ -12,7 +14,7 @@ function decodeExp(accessToken) {
   try {
     const payload = JSON.parse(atob(parts[1]));
     if (!payload?.exp) return null;
-    return new Date(payload.exp * 1000);
+    return safeDate(payload.exp * 1000);
   } catch (err) {
     console.warn("Unable to decode token exp", err);
     return null;
@@ -66,7 +68,7 @@ export default function SessionIndicator({ label, compact = false }) {
           <div className="mono tiny token-inline">{tokens.access_token.slice(0, 22)}…</div>
           <div className="muted tiny" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <span>Refresh: {tokens.refresh_token ? "present" : "missing"}</span>
-            {expiry ? <span className="pill soft tiny">exp {expiry.toLocaleString()}</span> : null}
+            {expiry ? <span className="pill soft tiny">exp {formatDateTime(expiry)}</span> : null}
           </div>
         </div>
       ) : (
