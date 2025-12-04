@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
+import { formatDateTime, formatRelative } from "../../../lib/dates";
 
 const ROLE_OPTIONS = [
   { value: "user", label: "User" },
@@ -33,11 +34,14 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [companyFilter, setCompanyFilter] = useState("all");
+  const [sort, setSort] = useState("name");
   const [currentUser, setCurrentUser] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [editDrafts, setEditDrafts] = useState({});
   const [editStatus, setEditStatus] = useState({});
   const [welcomeStatus, setWelcomeStatus] = useState({});
+  const [lastLoaded, setLastLoaded] = useState(null);
+  const cancelRef = useRef(false);
 
   const isFounder = currentUser?.role === "founder";
 
@@ -58,76 +62,97 @@ export default function AdminUsersPage() {
 
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return users
-      .filter((user) => {
-        const matchesRole = roleFilter === "all" || user.role === roleFilter;
-        const matchesCompany = companyFilter === "all" || user.company_id === companyFilter;
-        if (!query) return matchesRole && matchesCompany;
-        const haystack = `${user.name} ${user.email} ${user.username || ""} ${user.company_name || ""} ${companyMap.get(user.company_id) || ""}`.toLowerCase();
-        return matchesRole && matchesCompany && haystack.includes(query);
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [companyFilter, companyMap, roleFilter, search, users]);
+    const filtered = users.filter((user) => {
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      const matchesCompany = companyFilter === "all" || user.company_id === companyFilter;
+      if (!query) return matchesRole && matchesCompany;
+      const haystack = `${user.name} ${user.email} ${user.username || ""} ${user.company_name || ""} ${companyMap.get(user.company_id) || ""}`.toLowerCase();
+      return matchesRole && matchesCompany && haystack.includes(query);
+    });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadProfile = async () => {
-      try {
-        const res = await fetchWithAuth("/api/users/me");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setCurrentUser(data);
-      } catch (error) {
-        console.warn("Unable to load profile", error);
-      }
+    const compareRole = (a, b) => ROLE_ORDER.indexOf(b.role) - ROLE_ORDER.indexOf(a.role);
+    const compareName = (a, b) => a.name.localeCompare(b.name);
+    const compareCompany = (a, b) => {
+      const aName = (a.company_name || companyMap.get(a.company_id) || "").toLowerCase();
+      const bName = (b.company_name || companyMap.get(b.company_id) || "").toLowerCase();
+      if (aName && bName && aName !== bName) return aName.localeCompare(bName);
+      return compareName(a, b);
     };
 
-    const loadCompanies = async () => {
-      if (!isFounder) return;
-      try {
-        const res = await fetchWithAuth("/api/companies");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && Array.isArray(data)) setCompanies(data);
-      } catch (error) {
-        console.warn("Unable to load companies", error);
-      }
-    };
+    switch (sort) {
+      case "role":
+        return filtered.sort((a, b) => {
+          const roleOrder = compareRole(a, b);
+          if (roleOrder !== 0) return roleOrder;
+          return compareName(a, b);
+        });
+      case "company":
+        return filtered.sort(compareCompany);
+      default:
+        return filtered.sort(compareName);
+    }
+  }, [companyFilter, companyMap, roleFilter, search, sort, users]);
 
-    const loadUsers = async () => {
-      setStatus({ state: "loading", message: "" });
-      try {
-        const res = await fetchWithAuth("/api/users");
-        if (!res.ok) {
-          const detail = await res.json().catch(() => ({}));
-          if (!cancelled) {
-            setStatus({
-              state: "error",
-              message: detail?.detail || `Unable to load users (${res.status})`,
-            });
-          }
-          return;
-        }
-        const data = await res.json();
-        if (!cancelled) {
-          setUsers(Array.isArray(data) ? data : []);
-          setStatus({ state: "idle", message: "" });
-        }
-      } catch (error) {
-        if (!cancelled) {
+  const loadUsers = async () => {
+    setStatus({ state: "loading", message: "" });
+    try {
+      const res = await fetchWithAuth("/api/users");
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        if (!cancelRef.current) {
           setStatus({
             state: "error",
-            message: error instanceof Error ? error.message : "Failed to load users",
+            message: detail?.detail || `Unable to load users (${res.status})`,
           });
         }
+        return;
       }
-    };
+      const data = await res.json();
+      if (!cancelRef.current) {
+        setUsers(Array.isArray(data) ? data : []);
+        setStatus({ state: "idle", message: "" });
+        setLastLoaded(new Date());
+      }
+    } catch (error) {
+      if (!cancelRef.current) {
+        setStatus({
+          state: "error",
+          message: error instanceof Error ? error.message : "Failed to load users",
+        });
+      }
+    }
+  };
+
+  const loadProfile = async () => {
+    try {
+      const res = await fetchWithAuth("/api/users/me");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!cancelRef.current) setCurrentUser(data);
+    } catch (error) {
+      console.warn("Unable to load profile", error);
+    }
+  };
+
+  const loadCompanies = async () => {
+    if (!isFounder) return;
+    try {
+      const res = await fetchWithAuth("/api/companies");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!cancelRef.current && Array.isArray(data)) setCompanies(data);
+    } catch (error) {
+      console.warn("Unable to load companies", error);
+    }
+  };
+
+  useEffect(() => {
+    cancelRef.current = false;
 
     loadProfile().then(loadCompanies);
     loadUsers();
     return () => {
-      cancelled = true;
+      cancelRef.current = true;
     };
   }, [isFounder]);
 
@@ -309,6 +334,7 @@ export default function AdminUsersPage() {
     setSearch("");
     setRoleFilter("all");
     setCompanyFilter("all");
+    setSort("name");
   };
 
   return (
@@ -408,7 +434,17 @@ export default function AdminUsersPage() {
               </p>
             </div>
 
-            {status.state === "loading" && <div className="pill pill-soft">Loading users…</div>}
+            <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+              <span className="tiny muted" title={lastLoaded ? formatDateTime(lastLoaded) : undefined}>
+                Showing {filteredUsers.length} of {users.length || 0} accounts
+                {lastLoaded && ` • Updated ${formatRelative(lastLoaded)}`}
+              </span>
+              <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", marginLeft: "auto" }}>
+                <button type="button" className="ghost" onClick={loadUsers} disabled={status.state === "loading"}>
+                  {status.state === "loading" ? "Refreshing…" : "Refresh"}
+                </button>
+              </div>
+            </div>
 
             <div className="chip-row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
               <label className="stack" style={{ gap: "0.2rem", flex: "1 1 240px", minWidth: "0" }}>
@@ -429,6 +465,14 @@ export default function AdminUsersPage() {
                       {option.label}
                     </option>
                   ))}
+                </select>
+              </label>
+              <label className="stack" style={{ gap: "0.2rem", width: "200px" }}>
+                <span className="tiny muted">Sort</span>
+                <select value={sort} onChange={(event) => setSort(event.target.value)}>
+                  <option value="name">Name (A–Z)</option>
+                  <option value="role">Role (highest first)</option>
+                  <option value="company">Company</option>
                 </select>
               </label>
               {isFounder && (
@@ -455,6 +499,13 @@ export default function AdminUsersPage() {
               )}
               {users.length > 0 && filteredUsers.length === 0 && (
                 <div className="tiny muted">No users match your filters.</div>
+              )}
+              {status.state === "loading" && users.length === 0 && (
+                <div className="stack" style={{ gap: "0.5rem" }}>
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="skeleton" style={{ height: "140px" }} />
+                  ))}
+                </div>
               )}
               {filteredUsers.map((user) => {
                 const draft = editDrafts[user.id];
