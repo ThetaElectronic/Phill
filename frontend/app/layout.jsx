@@ -35,7 +35,7 @@ export default async function RootLayout({ children }) {
     }
   }
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = profile?.role === "admin" || profile?.role === "founder";
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/documents", label: "Documents" },

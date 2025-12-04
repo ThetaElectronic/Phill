@@ -33,7 +33,8 @@ export default function AdminWall({ children, title = "Admin access required", d
           return;
         }
         const profile = await res.json();
-        if (profile?.role !== "admin") {
+        const isAdmin = profile?.role === "admin" || profile?.role === "founder";
+        if (!isAdmin) {
           if (active) setState({ status: "forbidden", message: "Admins only", profile: null });
           return;
         }
