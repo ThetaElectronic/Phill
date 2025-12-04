@@ -123,10 +123,37 @@ export default function DocumentsClient({ session }) {
   const [tokens] = useState(() => session || loadTokens());
   const [documents, setDocuments] = useState([]);
   const [state, setState] = useState({ status: "idle" });
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(() => {
+    if (typeof window === "undefined") return "all";
+    try {
+      const saved = JSON.parse(localStorage.getItem("phill-doc-prefs") || "{}");
+      return filters.some((item) => item.value === saved.filter) ? saved.filter : "all";
+    } catch (error) {
+      console.warn("Unable to read document filter preference", error);
+      return "all";
+    }
+  });
   const [lastLoaded, setLastLoaded] = useState(null);
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [query, setQuery] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const saved = JSON.parse(localStorage.getItem("phill-doc-prefs") || "{}");
+      return typeof saved.query === "string" ? saved.query : "";
+    } catch (error) {
+      console.warn("Unable to read document search preference", error);
+      return "";
+    }
+  });
+  const [sort, setSort] = useState(() => {
+    if (typeof window === "undefined") return "newest";
+    try {
+      const saved = JSON.parse(localStorage.getItem("phill-doc-prefs") || "{}");
+      return sorters.some((item) => item.value === saved.sort) ? saved.sort : "newest";
+    } catch (error) {
+      console.warn("Unable to read document sort preference", error);
+      return "newest";
+    }
+  });
 
   const filteredDocs = useMemo(() => {
     const scoped = filter === "all" ? documents : documents.filter((doc) => doc.scope === filter);
@@ -149,6 +176,17 @@ export default function DocumentsClient({ session }) {
     });
     return sorted;
   }, [filteredDocs, sort]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "phill-doc-prefs",
+        JSON.stringify({ filter, query, sort })
+      );
+    } catch (error) {
+      console.warn("Unable to persist document preferences", error);
+    }
+  }, [filter, query, sort]);
 
   const totalCount = documents.length;
   const shownCount = visibleDocs.length;

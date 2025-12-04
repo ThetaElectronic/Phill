@@ -139,9 +139,36 @@ export default function AdminDocumentsPage() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ state: "idle", message: "" });
-  const [filter, setFilter] = useState("all");
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [filter, setFilter] = useState(() => {
+    if (typeof window === "undefined") return "all";
+    try {
+      const saved = JSON.parse(localStorage.getItem("phill-admin-doc-prefs") || "{}");
+      return filters.some((item) => item.value === saved.filter) ? saved.filter : "all";
+    } catch (error) {
+      console.warn("Unable to read admin doc filter preference", error);
+      return "all";
+    }
+  });
+  const [query, setQuery] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const saved = JSON.parse(localStorage.getItem("phill-admin-doc-prefs") || "{}");
+      return typeof saved.query === "string" ? saved.query : "";
+    } catch (error) {
+      console.warn("Unable to read admin doc search preference", error);
+      return "";
+    }
+  });
+  const [sort, setSort] = useState(() => {
+    if (typeof window === "undefined") return "newest";
+    try {
+      const saved = JSON.parse(localStorage.getItem("phill-admin-doc-prefs") || "{}");
+      return sorters.some((item) => item.value === saved.sort) ? saved.sort : "newest";
+    } catch (error) {
+      console.warn("Unable to read admin doc sort preference", error);
+      return "newest";
+    }
+  });
   const [lastLoaded, setLastLoaded] = useState(null);
 
   const filteredDocs = useMemo(() => {
@@ -165,6 +192,17 @@ export default function AdminDocumentsPage() {
     });
     return sorted;
   }, [filteredDocs, sort]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "phill-admin-doc-prefs",
+        JSON.stringify({ filter, query, sort })
+      );
+    } catch (error) {
+      console.warn("Unable to persist admin doc preferences", error);
+    }
+  }, [filter, query, sort]);
 
   const loadDocuments = async () => {
     setLoading(true);
