@@ -72,8 +72,8 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - The admin requests view includes search, sort (newest/oldest), reset controls, and shown/total counts so you can quickly audit access or password reset submissions without wading through clutter.
 
 ### Admin user management
-- Admins and founders can manage users from `/admin/users` (UI) or `/api/users` (API). Admins are constrained to their own company scope and cannot grant a higher role than their own.
-- The UI shows a simple list of existing users you are allowed to see and a form to add new accounts with name, email, password, and role. Each user row also includes a **password reset** control for setting a temporary password when someone is locked out.
+- Admins and founders can manage users from `/admin/users` (UI) or `/api/users` (API). Admins are constrained to their own company scope and cannot grant a higher role than their own; founders can see every company and move accounts between tenants.
+- The UI lists the users visible to your role with search/filters plus inline editing for **name/username**, **role**, and (for founders) **company**. Each row keeps a **password reset** control for issuing a temporary password when someone is locked out.
 - To add a user via API (honors the same role checks):
 
   ```bash
@@ -92,6 +92,19 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
     -d '{"password":"NewTempP@ssw0rd!"}'
   ```
 
+- To edit an existing user (admins stay within their company; founders can move and re-role any account):
+
+  ```bash
+  curl -X PATCH $NEXT_BACKEND_URL/api/users/<user_id> \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{"name":"New Name","role":"manager","company_id":"<company-id-if-founder>"}'
+  ```
+
+### Admin email templates
+- Visit `/admin/email` to edit the **welcome email** template sent to newly created users. Subject/body changes save to the database and can be reset to the current version.
+- The same page lets you send a **test email** using the template with the configured SMTP credentials once `SMTP_*` environment variables are in place.
+
 ### Admin system status
 - Visit `/admin/system` to see live readiness for the database, SMTP, and AI configuration. The page calls `/api/admin/status` (admin-only), auto-refreshes every 30 seconds, and surfaces both an overall status banner and per-subsystem indicators along with the backend's latency buckets. A **Refresh now** button is available for immediate checks after configuration changes.
 - The status endpoint reports `status` = `ok` only when the database, SMTP settings, and AI configuration are all ready. It also includes the current environment (`ENV`), version tag (`APP_VERSION`, defaults to `dev`), and the UTC timestamp of the last check.
@@ -105,12 +118,11 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - Visit `/admin/diagnostics` for the detailed payloads and endpoints that would clutter the user-facing UI. The page pulls the raw responses from `/api/admin/status` and `/ai/status`, surfaces latency buckets, shows endpoint URLs for quick copy/paste, and renders the JSON payloads for debugging. Copy buttons are available next to endpoints and payloads so you can quickly share the exact status data with ops or support.
 
 ### AI chat with document grounding
-- Upload PDFs or text files on the `/ai` page to ground the next reply. Choose whether each upload is **company scoped** (default) or shared for **global training** across all tenants, and adjust the scope later from the document list if needed. Extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed. Stored training text is returned in the documents list so you can inspect exactly what was saved for grounding.
+- Use `/documents` (users) or `/admin/documents` (admins) to upload PDFs or text files for grounding. Choose whether each upload is **company scoped** (default) or shared for **global training** across all tenants, and adjust the scope later if needed. Extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed. Stored training text is returned in the documents list so you can inspect exactly what was saved for grounding.
 - Admins can audit training uploads at `/admin/documents`, see size/type metadata (including stored text), flip scopes between company/global, or remove outdated files without leaving the panel.
-- Browse existing training files on `/documents` (users) or `/admin/documents` (admins) with scope filters, search, sort, refresh, and reset controls. Both pages show the last refresh time, document counts, let you copy the stored training text for quick verification, and now offer a **Download text** shortcut that saves the stored content as a `.txt` file.
-- Select any number of documents in the sidebar before sending your prompt; the backend prepends their text to the AI request so the reply references the provided material. Global training files are usable by every company, while company-scoped uploads remain private to their owner. Scope changes keep ownership with the original company and take effect immediately.
+- Browse existing training files on `/documents` (users) or `/admin/documents` (admins) with scope filters, search, sort, refresh, reset controls, copy helpers, download links, and relative refresh timestamps. Manage all training content there rather than in the chat UI.
+- Attach any number of documents from the AI chat page to ground your prompt; the backend prepends their text to the AI request so the reply references the provided material. Global training files are usable by every company, while company-scoped uploads remain private to their owner. Scope changes keep ownership with the original company and take effect immediately.
 - Toggle memory to save the chat under your personal AI profile (tagged to your user and company) so future personality tuning has more examples. Leave it off for ephemeral questions.
-- Remove a document you uploaded at any time from the `/ai` page or via the API; deletions are immediate and limited to the owner company.
 - API examples:
 
   ```bash
