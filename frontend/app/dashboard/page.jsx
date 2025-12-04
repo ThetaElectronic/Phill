@@ -61,15 +61,6 @@ export default async function DashboardPage() {
                 </a>
               )}
             </div>
-            <div className="card surface stack" style={{ gap: "0.35rem" }}>
-              <span className="muted tiny">Phill AI</span>
-              <div className="chip-row" style={{ alignItems: "center", gap: "0.35rem" }}>
-                <span className={`status-chip ${aiTone}`}>{aiLabel}</span>
-                {data.aiStatus?.model && <span className="pill pill-outline">{data.aiStatus.model}</span>}
-              </div>
-              <span className="tiny muted">{aiDetail}</span>
-              {aiChecked && <span className="tiny muted">Checked {aiChecked}</span>}
-            </div>
           </div>
           <div className="chip-row" style={{ justifyContent: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
             <ThemeToggle className="secondary" />

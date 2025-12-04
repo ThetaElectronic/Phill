@@ -1,6 +1,6 @@
-# Phill Rebuild
+# Phill
 
-This repository contains the 2025 rebuild scaffold for Phill. Use the Docker compose stack to bring up the API and frontend so you can see the placeholder UI and verify networking.
+This repository contains the full Phill application: a FastAPI + Next.js stack with AI-assisted chat, document grounding, admin tooling, and company-scoped authentication. Bring the stack up with Docker Compose to run the production-ready UI and API together.
 
 > If the site does not load, use the Nginx health endpoint at http://localhost/healthz to confirm the proxy is running, and hit
 > the API health endpoint at http://localhost/api/health to verify backend routing through the proxy.
@@ -260,7 +260,7 @@ cp .env.example .env
 Add your OpenAI project key to `.env` (or the deployment secrets store) so Phill AI can answer chats and process training files:
 
 ```env
-# Example placeholder (replace with your real project key)
+# Add your OpenAI project key
 OPENAI_API_KEY=<your-openai-api-key>
 AI_MODEL=gpt-4o-mini
 ```
@@ -338,8 +338,8 @@ uvicorn app.main:app --reload --port 8001
 ```
 Then visit http://localhost:8001/docs for the interactive API docs.
 
-## Current state of the UI
-The frontend currently contains page stubs for login, dashboard, incidents, documents, companies, AI chat, settings, and admin areas. The visuals are minimal placeholders until components and styling are implemented.
+## UI overview
+The frontend ships complete flows for login, dashboard (AI-first workspace), documents/training files, incidents, admin requests, email tooling, diagnostics, and company-aware admin management. Navigation hides admin links from non-admin users and keeps the focus on chatting with Phill while managing training files separately.
 
 ## Server-side auth redirects
 - Protected pages now redirect unauthenticated visitors to `/login?next=<path>` using cookies set during login.
