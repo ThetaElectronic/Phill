@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth } from "../../lib/api";
 import { loadTokens } from "../../lib/auth";
-import { formatDateTime, formatTime, safeDate } from "../../lib/dates";
+import { formatDateTime, formatRelative, formatTime, safeDate } from "../../lib/dates";
 
 const filters = [
   { value: "all", label: "All" },
@@ -292,8 +292,12 @@ export default function DocumentsClient({ session }) {
                     </button>
                   ))}
                 </div>
-                <span className="tiny muted" aria-live="polite">
-                  Updated {formatTime(lastLoaded, "Not yet loaded")}
+                <span
+                  className="tiny muted"
+                  aria-live="polite"
+                  title={formatDateTime(lastLoaded, "Not yet loaded")}
+                >
+                  Updated {formatRelative(lastLoaded, "Not yet loaded")}
                 </span>
                 <span className="muted tiny">
                   {shownCount ? `${shownCount} shown` : "No documents"}
