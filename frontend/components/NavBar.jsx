@@ -8,7 +8,7 @@ import LogoutButton from "./LogoutButton";
 import SessionIndicator from "./SessionIndicator";
 import ThemeToggle from "./ThemeToggle";
 
-export default function NavBar({ navLinks, userLabel }) {
+export default function NavBar({ navLinks, userLabel, isAdmin = false }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -53,25 +53,38 @@ export default function NavBar({ navLinks, userLabel }) {
         {open && <button type="button" className="nav-overlay" aria-label="Close navigation" onClick={() => setOpen(false)} />}
 
         <div className={`nav-wrap${open ? " open" : ""}`}>
-          <nav className="nav chip-row" aria-label="Primary navigation">
-            {navLinks.map((link) => {
-              const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
-              return (
-                <Link
-                  key={link.href}
-                  className={`chip${active ? " chip-active" : ""}`}
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                >
-                  {link.label}
+          <div className="nav-group" aria-label="Navigation">
+            <span className="nav-label">Menu</span>
+            <nav className="nav chip-row" aria-label="Primary navigation">
+              {navLinks.map((link) => {
+                const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+                return (
+                  <Link
+                    key={link.href}
+                    className={`chip chip-nav${active ? " chip-active" : ""}`}
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <span className="chip-dot" aria-hidden />
+                    <span>{link.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+          <div className="nav-group nav-actions" aria-label="Session controls">
+            <span className="nav-label">Workspace</span>
+            <div className="chip-row" style={{ alignItems: "center", gap: "0.25rem" }}>
+              {isAdmin && (
+                <Link className="chip chip-cta" href="/admin">
+                  <span className="chip-dot" aria-hidden />
+                  Admin panel
                 </Link>
-              );
-            })}
-          </nav>
-          <div className="chip-row nav-actions" style={{ alignItems: "center", gap: "0.25rem" }}>
-            <ThemeToggle className="ghost" />
-            <LogoutButton className="ghost" onLoggedOut={() => router.push("/login")} />
-            <SessionIndicator label={userLabel} compact />
+              )}
+              <ThemeToggle className="ghost" />
+              <LogoutButton className="ghost" onLoggedOut={() => router.push("/login")} />
+              <SessionIndicator label={userLabel} compact />
+            </div>
           </div>
         </div>
       </div>

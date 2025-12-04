@@ -1,5 +1,6 @@
 import "./globals.css";
 import NavBar from "../components/NavBar";
+import { decodeAccessPayload } from "../lib/auth";
 import { getServerSession, serverFetchWithAuth } from "../lib/session";
 
 export const metadata = {
@@ -22,6 +23,31 @@ const themeInitScript = `(() => {
 export default async function RootLayout({ children }) {
   const session = getServerSession();
   const isAuthed = Boolean(session?.access_token);
+  const tokenPayload = isAuthed ? decodeAccessPayload(session?.access_token) : null;
+
+  let profile = null;
+  if (isAuthed) {
+    try {
+      const res = await serverFetchWithAuth("/api/users/me", session);
+      if (res.ok) {
+        profile = await res.json();
+      }
+    } catch (err) {
+      console.error("Failed to load profile for header nav", err);
+    }
+  }
+
+  const role = profile?.role || tokenPayload?.role;
+  const isAdmin = role === "admin" || role === "founder";
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/documents", label: "Documents" },
+    { href: "/account", label: "Account" },
+  ];
+  if (isAdmin) {
+    navLinks.push({ href: "/admin", label: "Admin" });
+  }
+  const userLabel = profile?.name || profile?.email || tokenPayload?.email || tokenPayload?.sub;
 
   let profile = null;
   if (isAuthed) {
@@ -53,7 +79,7 @@ export default async function RootLayout({ children }) {
       </head>
       <body>
         <div className="bg-grid gradient-shell">
-          {isAuthed && <NavBar navLinks={navLinks} userLabel={userLabel} />}
+          {isAuthed && <NavBar navLinks={navLinks} userLabel={userLabel} isAdmin={isAdmin} />}
           <main className={`main-content ${isAuthed ? "" : "auth-only"}`}>
             <div className="shell auth-shell">{children}</div>
           </main>
