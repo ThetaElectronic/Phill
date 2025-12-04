@@ -26,3 +26,22 @@ class UserRead(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1)
+    username: str | None = Field(default=None, min_length=3)
+
+
+class UserAdminUpdate(UserUpdate):
+    role: str | None = Field(default=None)
+    company_id: str | None = Field(default=None, min_length=1)
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8)
+
+
+class PasswordSet(BaseModel):
+    password: str = Field(..., min_length=8)
