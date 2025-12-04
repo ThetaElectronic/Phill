@@ -451,7 +451,9 @@ export default function AiClient({ session }) {
             </label>
             <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
               {selectedDocs.length > 0 && (
-                <span className="tiny muted">{selectedDocs.length} document{selectedDocs.length === 1 ? "" : "s"} attached</span>
+                <span className="tiny muted">
+                  {selectedDocs.length} document{selectedDocs.length === 1 ? "" : "s"} attached
+                </span>
               )}
               <button
                 type="button"
