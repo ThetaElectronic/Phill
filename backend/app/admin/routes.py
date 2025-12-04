@@ -63,6 +63,10 @@ class EmailTemplateRead(BaseModel):
         from_attributes = True
 
 
+class TestEmailPayload(BaseModel):
+    recipient: EmailStr
+
+
 @router.get("/requests/access", response_model=list[AccessRequestRead])
 def list_access_requests(
     limit: int = Query(50, ge=1, le=200),
