@@ -39,9 +39,9 @@ This repository contains the full Phill application: a FastAPI + Next.js stack w
 
   ```bash
   docker compose exec backend python scripts/bootstrap_admin.py \
-    --company "Jarvis Fuel" \
-    --domain jarvis-fuel.com \
-    --email admin@app.jarvis-fuel.com \
+    --company "Phill Labs" \
+    --domain phill.example.com \
+    --email admin@app.phill.example.com \
     --password "CHANGE_ME_STRONG"
   ```
 
