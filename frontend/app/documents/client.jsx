@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth } from "../../lib/api";
@@ -170,6 +170,9 @@ export default function DocumentsClient({ session }) {
       return "newest";
     }
   });
+  const [uploadScope, setUploadScope] = useState("company");
+  const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
+  const fileInputRef = useRef(null);
 
   const filteredDocs = useMemo(() => {
     const scoped = filter === "all" ? documents : documents.filter((doc) => doc.scope === filter);
@@ -260,6 +263,41 @@ export default function DocumentsClient({ session }) {
     }
   };
 
+  const openFilePicker = () => {
+    if (!fileInputRef.current) return;
+    fileInputRef.current.value = "";
+    fileInputRef.current.click();
+  };
+
+  const handleUploadChange = async (event) => {
+    const files = Array.from(event.target?.files || []);
+    if (!files.length) return;
+    setUploadStatus({ state: "loading", message: `Uploading ${files.length} file${files.length === 1 ? "" : "s"}…` });
+    try {
+      const formData = new FormData();
+      formData.append("scope", uploadScope);
+      files.forEach((file) => formData.append("files", file));
+
+      const res = await fetchWithAuth("/ai/documents", { method: "POST", body: formData });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        const message = payload?.detail || `Upload failed (${res.status})`;
+        setUploadStatus({ state: "error", message });
+        return;
+      }
+
+      setUploadStatus({ state: "success", message: `Uploaded ${files.length} file${files.length === 1 ? "" : "s"}` });
+      await handleRefresh();
+    } catch (error) {
+      setUploadStatus({
+        state: "error",
+        message: error instanceof Error ? error.message : "Could not upload files",
+      });
+    } finally {
+      if (event?.target) event.target.value = "";
+    }
+  };
+
   return (
     <AuthWall session={tokens} title="Training documents" description="Signed-in users can review uploaded AI files.">
       <section className="stack" style={{ gap: "1.25rem" }}>
@@ -271,13 +309,64 @@ export default function DocumentsClient({ session }) {
           </div>
           <h1 style={{ margin: 0 }}>Documents</h1>
           <p className="muted" style={{ margin: 0 }}>
-            These are the files you and your team uploaded to ground Phill. Upload and manage training files from the AI page;
-            this view simply lists what is available.
+            These are the files you and your team uploaded to ground Phill. Upload and manage training files here, then attach
+            them from the AI workspace when chatting.
           </p>
         </div>
 
         <div className="card glass stack" style={{ gap: "0.75rem" }}>
           <div className="stack" style={{ gap: "0.65rem" }}>
+            <div className="card surface stack" style={{ gap: "0.35rem" }}>
+              <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.35rem" }}>
+                <div className="stack" style={{ gap: "0.15rem" }}>
+                  <div className="badge-list" style={{ gap: "0.35rem" }}>
+                    <span className="pill">Upload</span>
+                    <span className="pill pill-outline">Multi-file</span>
+                  </div>
+                  <p className="tiny muted" style={{ margin: 0 }}>
+                    Select one or more files to add to Phill's training corpus. Choose whether they stay within your company or
+                    are available globally.
+                  </p>
+                </div>
+                <div className="chip-row" role="radiogroup" aria-label="Select upload scope">
+                  {["company", "global"].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`chip chip-soft${uploadScope === value ? " chip-active" : ""}`}
+                      onClick={() => setUploadScope(value)}
+                      role="radio"
+                      aria-checked={uploadScope === value}
+                    >
+                      {value === "company" ? "Company" : "Global"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="*/*"
+                  onChange={handleUploadChange}
+                  style={{ display: "none" }}
+                />
+                <button type="button" className="secondary" onClick={openFilePicker} disabled={uploadStatus.state === "loading"}>
+                  {uploadStatus.state === "loading" ? "Uploading…" : "Upload files"}
+                </button>
+                <span className="tiny muted">Pick PDFs, images, slides, spreadsheets, or text files together.</span>
+              </div>
+              {uploadStatus.state === "loading" && (
+                <div className="status-info" aria-live="polite">{uploadStatus.message || "Uploading…"}</div>
+              )}
+              {uploadStatus.state === "success" && (
+                <div className="status-success" aria-live="polite">{uploadStatus.message || "Upload complete"}</div>
+              )}
+              {uploadStatus.state === "error" && uploadStatus.message && (
+                <div className="status-error" aria-live="polite">{uploadStatus.message}</div>
+              )}
+            </div>
             <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
               <div className="chip-row" role="radiogroup" aria-label="Filter documents by scope">
                 {filters.map((item) => (
