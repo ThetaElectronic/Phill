@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
-import { formatDateTime, formatTime, safeDate } from "../../../lib/dates";
+import { formatDateTime, formatRelative, formatTime, safeDate } from "../../../lib/dates";
 
 function StatusPill({ ok, label }) {
   const className = ok ? "pill pill-success" : "pill pill-outline";
@@ -133,7 +133,7 @@ export default function AdminSystemPage() {
             {loading ? "Refreshing…" : "Refresh now"}
           </button>
           <span className="tiny muted">
-            Updated {formatDateTime(lastUpdated, "Not yet checked")}
+            Updated {formatRelative(lastUpdated, "Not yet checked")}
           </span>
         </div>
 
@@ -146,7 +146,7 @@ export default function AdminSystemPage() {
             <span className="pill pill-outline">Env: {environment}</span>
             <span className="pill pill-outline">Version: {version}</span>
             <span className="tiny muted">
-              Checked {formatDateTime(lastUpdated, "Not yet checked")}
+              <span title={formatDateTime(lastUpdated, "Not yet checked")}>Checked {formatRelative(lastUpdated, "Not yet checked")}</span>
             </span>
           </section>
         )}

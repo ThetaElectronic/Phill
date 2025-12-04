@@ -1,7 +1,7 @@
 import AuthWall from "../../components/AuthWall";
 import ThemeToggle from "../../components/ThemeToggle";
 import { getSessionOrRedirect, serverFetchWithAuth } from "../../lib/session";
-import { formatDateTime } from "../../lib/dates";
+import { formatRelative } from "../../lib/dates";
 import AiPanelWrapper from "./AiPanelWrapper";
 
 async function loadDashboardData(session) {
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
     ? data.incidents.filter((item) => item.status === "open").length
     : 0;
   const aiReady = data.aiStatus?.ok === true;
-  const aiChecked = data.aiStatus?.checked_at ? formatDateTime(data.aiStatus.checked_at) : null;
+  const aiChecked = data.aiStatus?.checked_at ? formatRelative(data.aiStatus.checked_at) : null;
   const aiTone = data.aiStatus ? (aiReady ? "ok" : "error") : "idle";
   const aiLabel = data.aiStatus ? (aiReady ? "Ready" : "Needs setup") : "Checking";
   const aiDetail = aiReady

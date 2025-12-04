@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth, apiUrl } from "../../../lib/api";
-import { formatDateTime } from "../../../lib/dates";
+import { formatDateTime, formatRelative } from "../../../lib/dates";
 
 function DetailCard({ title, description, children }) {
   return (
@@ -160,7 +160,9 @@ export default function AdminDiagnosticsPage() {
           {!loading && hasAdminData && <StatusList status={adminStatus} />}
           {!loading && !hasAdminData && <div className="muted tiny">No admin payload loaded yet.</div>}
           {adminStatus?.checked_at && (
-            <span className="tiny muted">Checked at {formatDateTime(adminStatus.checked_at)}</span>
+            <span className="tiny muted" title={formatDateTime(adminStatus.checked_at)}>
+              Checked {formatRelative(adminStatus.checked_at)}
+            </span>
           )}
         </DetailCard>
 

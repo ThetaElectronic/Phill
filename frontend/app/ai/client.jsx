@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth, apiUrl } from "../../lib/api";
 import { loadTokens } from "../../lib/auth";
-import { formatDateTime, formatTime, safeDate } from "../../lib/dates";
+import { formatDateTime, formatRelative, formatTime, safeDate } from "../../lib/dates";
 
 const STORAGE_KEYS = {
   scope: "ai-doc-scope",
@@ -300,7 +300,7 @@ export default function AiClient({ session }) {
         : aiStatus
           ? "Needs setup"
           : "Checking";
-  const aiCheckedLabel = formatDateTime(aiStatus?.checked_at, "Not yet checked");
+  const aiCheckedLabel = formatRelative(aiStatus?.checked_at, "Not yet checked");
   const filteredDocs = Array.isArray(documents)
     ? documents
         .filter((doc) =>
