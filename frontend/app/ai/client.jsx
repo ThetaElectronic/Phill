@@ -30,6 +30,7 @@ function DocumentSkeleton() {
 }
 
 export default function AiClient({ session }) {
+  const maxDocuments = Number(process.env.NEXT_PUBLIC_AI_MAX_DOCUMENTS || 5);
   const [tokens] = useState(() => session || loadTokens());
   const prefKey = (suffix) => preferenceKey(`ai-${suffix}`, tokens);
   const [messages, setMessages] = useState([]);
