@@ -126,7 +126,7 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - Visit `/admin/diagnostics` for the detailed payloads and endpoints that would clutter the user-facing UI. The page pulls the raw responses from `/api/admin/status` and `/ai/status`, surfaces latency buckets, shows endpoint URLs for quick copy/paste, and renders the JSON payloads for debugging. Copy buttons are available next to endpoints and payloads so you can quickly share the exact status data with ops or support.
 
 ### AI chat with document grounding
-- Use `/documents` (users) or `/admin/documents` (admins) to upload PDFs or text files for grounding. Choose whether each upload is **company scoped** (default) or shared for **global training** across all tenants, and adjust the scope later if needed. Extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB; override with `AI_DOCUMENT_MAX_BYTES` if needed. Stored training text is returned in the documents list so you can inspect exactly what was saved for grounding.
+- Use `/documents` (users) or `/admin/documents` (admins) to upload **multiple training files at once** (PDFs, text, images, slides, spreadsheets, or other formats). Choose whether each upload is **company scoped** (default) or shared for **global training** across all tenants, and adjust the scope later if needed. Extracted text is trimmed to the first ~20k characters by default for storage and grounding (configurable via `AI_DOCUMENT_MAX_TEXT`). The default upload size limit is 512 KB per file; override with `AI_DOCUMENT_MAX_BYTES` if needed. Non-text/binary uploads are stored with their metadata and size so they can still be attached for training, even if no text is extracted. Stored training text is returned in the documents list so you can inspect exactly what was saved for grounding.
 - Admins can audit training uploads at `/admin/documents`, see size/type metadata (including stored text), flip scopes between company/global, or remove outdated files without leaving the panel.
 - Browse existing training files on `/documents` (users) or `/admin/documents` (admins) with scope filters, search, sort, refresh, reset controls, copy helpers, download links, and relative refresh timestamps. Manage all training content there rather than in the chat UI.
 - Attach any number of documents from the AI chat page to ground your prompt; the backend prepends their text to the AI request so the reply references the provided material. Global training files are usable by every company, while company-scoped uploads remain private to their owner. Scope changes keep ownership with the original company and take effect immediately.
@@ -134,11 +134,20 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 - API examples:
 
   ```bash
-  # Upload a PDF or text file
+  # Upload multiple files with a shared scope
   curl -X POST "$NEXT_BACKEND_URL/api/ai/documents" \
     -H "Authorization: Bearer <token>" \
-    -F "file=@/path/to/guide.pdf" \
+    -F "files=@/path/to/guide.pdf" \
+    -F "files=@/path/to/plan.xlsx" \
     -F "scope=company" # or scope=global
+
+  # Upload with per-file scopes (align scopes count to files count)
+  curl -X POST "$NEXT_BACKEND_URL/api/ai/documents" \
+    -H "Authorization: Bearer <token>" \
+    -F "files=@/path/to/guide.pdf" \
+    -F "files=@/path/to/diagram.png" \
+    -F "scopes=company" \
+    -F "scopes=global"
 
   # Chat with a document attached (replace <doc_id> from the upload response)
   curl -X POST "$NEXT_BACKEND_URL/api/ai/chat" \

@@ -96,49 +96,71 @@ def chat(
     return ChatResponse(reply=safe_output, model=raw_output.get("model"), id=raw_output.get("id"), usage=raw_output.get("usage"))
 
 
-@router.post("/documents", response_model=DocumentPayload)
-async def upload_document(
-    file: UploadFile = File(...),
-    scope: str = Form("company"),
+@router.post("/documents", response_model=list[DocumentPayload])
+async def upload_documents(
+    files: list[UploadFile] | None = File(default=None, alias="files"),
+    file: UploadFile | None = File(default=None, alias="file"),
+    scope: str | None = Form(default="company"),
+    scopes: list[str] | None = Form(default=None, alias="scopes"),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
-) -> DocumentPayload:
+) -> list[DocumentPayload]:
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User is not linked to a company")
 
-    scope = (scope or "company").lower().strip()
-    if scope not in {"company", "global"}:
-        raise HTTPException(status_code=400, detail="Invalid scope")
+    upload_batch: list[UploadFile] = []
+    if files:
+        upload_batch.extend(files)
+    if file:
+        upload_batch.append(file)
 
+    if not upload_batch:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    resolved_scopes: list[str] = []
+    if scopes:
+        resolved_scopes = [(value or "company").strip().lower() for value in scopes]
+        if len(resolved_scopes) not in {0, len(upload_batch)}:
+            raise HTTPException(status_code=400, detail="Scope count does not match file count")
+
+    default_scope = (scope or "company").strip().lower()
+    documents: list[DocumentPayload] = []
     settings = get_settings()
-    raw_bytes = await file.read()
-    if not raw_bytes:
-        raise HTTPException(status_code=400, detail="File is empty")
-
     max_size = int(settings.ai_document_max_bytes or 512_000)
-    if len(raw_bytes) > max_size:
-        raise HTTPException(status_code=413, detail=f"File too large (max {max_size} bytes)")
-
-    text = _extract_text(file.filename or "", file.content_type or "", raw_bytes)
     max_text = int(settings.ai_document_max_text or 20_000)
-    trimmed_text = (text or "").strip()[:max_text]
-    excerpt = trimmed_text[:300]
 
-    memory = AiMemoryCreate(
-        company_id=current_user.company_id,
-        data={
-            "type": "document",
-            "scope": scope,
-            "filename": file.filename,
-            "content_type": file.content_type,
-            "size": len(raw_bytes),
-            "text": trimmed_text,
-            "excerpt": excerpt,
-        },
-    )
-    record = _store_memory(memory, session)
+    for idx, upload in enumerate(upload_batch):
+        target_scope = resolved_scopes[idx] if resolved_scopes else default_scope
+        if target_scope not in {"company", "global"}:
+            raise HTTPException(status_code=400, detail="Invalid scope")
 
-    return _document_payload(record)
+        raw_bytes = await upload.read()
+        if not raw_bytes:
+            raise HTTPException(status_code=400, detail=f"{upload.filename or 'File'} is empty")
+
+        if len(raw_bytes) > max_size:
+            raise HTTPException(status_code=413, detail=f"{upload.filename or 'File'} is too large (max {max_size} bytes)")
+
+        text = _extract_text(upload.filename or "", upload.content_type or "", raw_bytes)
+        trimmed_text = (text or "").strip()[:max_text]
+        excerpt = trimmed_text[:300]
+
+        memory = AiMemoryCreate(
+            company_id=current_user.company_id,
+            data={
+                "type": "document",
+                "scope": target_scope,
+                "filename": upload.filename,
+                "content_type": upload.content_type,
+                "size": len(raw_bytes),
+                "text": trimmed_text,
+                "excerpt": excerpt,
+            },
+        )
+        record = _store_memory(memory, session)
+        documents.append(_document_payload(record))
+
+    return documents
 
 
 @router.get("/documents", response_model=list[DocumentPayload])
@@ -251,6 +273,23 @@ def _extract_text(filename: str, content_type: str, raw_bytes: bytes) -> str:
             return "\n".join(text_chunks).strip()
         except Exception as exc:  # pragma: no cover - external library
             raise HTTPException(status_code=400, detail=f"Could not read PDF: {exc}") from exc
+
+    binary_types = (
+        "image/",
+        "video/",
+        "audio/",
+        "application/octet-stream",
+        "application/zip",
+        "application/vnd",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument",
+    )
+
+    if any(lowered_type.startswith(prefix) for prefix in binary_types):
+        return ""
+
+    if any(lowered_name.endswith(ext) for ext in [".ppt", ".pptx", ".xls", ".xlsx", ".csv", ".png", ".jpg", ".jpeg", ".gif", ".bmp"]):
+        return ""
 
     try:
         return raw_bytes.decode("utf-8")

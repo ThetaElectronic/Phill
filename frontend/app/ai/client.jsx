@@ -34,6 +34,8 @@ export default function AiClient({ session }) {
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [documentsLoadedAt, setDocumentsLoadedAt] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [uploadScope, setUploadScope] = useState("company");
+  const fileInputRef = useRef(null);
   const messageListRef = useRef(null);
   const [copiedMessage, setCopiedMessage] = useState(null);
 
@@ -76,7 +78,10 @@ export default function AiClient({ session }) {
   const loadDocuments = async () => {
     if (!tokens) return;
     setDocumentsLoading(true);
-    setDocStatus((prev) => (prev.state === "loading" ? prev : { state: "idle" }));
+    setDocStatus((prev) => {
+      if (prev.state === "loading" || prev.state === "success") return prev;
+      return { state: "idle" };
+    });
     try {
       const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
       if (!res.ok) {
@@ -93,6 +98,32 @@ export default function AiClient({ session }) {
       setDocStatus({ state: "error", message });
     } finally {
       setDocumentsLoading(false);
+    }
+  };
+
+  const uploadDocuments = async (files) => {
+    if (!tokens || !files?.length) return;
+    setDocStatus({ state: "loading", message: `Uploading ${files.length} file${files.length === 1 ? "" : "s"}…` });
+    try {
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file));
+      formData.append("scope", uploadScope);
+
+      const res = await fetchWithAuth("/ai/documents", { method: "POST", body: formData });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        const message = payload?.detail || `Upload failed (${res.status})`;
+        setDocStatus({ state: "error", message });
+        return;
+      }
+
+      setDocStatus({ state: "success", message: `Uploaded ${files.length} file${files.length === 1 ? "" : "s"}` });
+      await loadDocuments();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to upload documents";
+      setDocStatus({ state: "error", message });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -176,6 +207,16 @@ export default function AiClient({ session }) {
     setDocStatus((prev) => (prev.state === "error" ? { state: "idle" } : prev));
   };
 
+  const openFilePicker = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileChange = (event) => {
+    const picked = Array.from(event.target.files || []);
+    if (!picked.length) return;
+    uploadDocuments(picked);
+  };
+
   const aiReady = aiStatus?.ok === true;
   const aiTone =
     aiStatusState === "loading" ? "idle" : aiReady ? "ok" : aiStatus ? "error" : "idle";
@@ -245,7 +286,7 @@ export default function AiClient({ session }) {
                 <span className="pill pill-outline">Training files</span>
               </div>
               <p className="muted tiny" style={{ margin: 0 }}>
-                Pick files to ground your next prompt. Manage uploads in the Documents section.
+                Pick or upload multiple files to ground your next prompt. Adjust scope later in Documents if you need to.
               </p>
             </div>
             <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -263,6 +304,42 @@ export default function AiClient({ session }) {
               {lastLoadedLabel && <span className="tiny muted">Updated {lastLoadedLabel}</span>}
             </div>
           </header>
+
+          <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+            <div className="chip-row" role="radiogroup" aria-label="Select upload scope">
+              {["company", "global"].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`chip chip-soft${uploadScope === value ? " chip-active" : ""}`}
+                  onClick={() => setUploadScope(value)}
+                  role="radio"
+                  aria-checked={uploadScope === value}
+                >
+                  {value === "company" ? "Company" : "Global"}
+                </button>
+              ))}
+            </div>
+            <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="*/*"
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+              />
+              <button
+                type="button"
+                className="secondary"
+                onClick={openFilePicker}
+                disabled={docStatus.state === "loading"}
+              >
+                {docStatus.state === "loading" ? "Uploading…" : "Upload files"}
+              </button>
+              <span className="tiny muted">Select multiple PDFs, images, slides, or spreadsheets at once.</span>
+            </div>
+          </div>
 
           <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
             <input
@@ -330,6 +407,8 @@ export default function AiClient({ session }) {
                 );
               })}
           </div>
+          {docStatus.state === "loading" && <div className="status-info">{docStatus.message || "Uploading…"}</div>}
+          {docStatus.state === "success" && <div className="status-success">{docStatus.message || "Upload complete"}</div>}
           {docStatus.state === "error" && <div className="status-error">{docStatus.message}</div>}
         </div>
 
