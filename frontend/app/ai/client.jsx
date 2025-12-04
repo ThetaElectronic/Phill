@@ -5,7 +5,35 @@ import { useEffect, useRef, useState } from "react";
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth, apiUrl } from "../../lib/api";
 import { loadTokens } from "../../lib/auth";
-import { formatTime, safeDate } from "../../lib/dates";
+import { formatDateTime, formatTime, safeDate } from "../../lib/dates";
+
+const STORAGE_KEYS = {
+  scope: "ai-doc-scope",
+  filter: "ai-doc-filter",
+  sort: "ai-doc-sort",
+};
+
+const allowedFilters = new Set(["all", "company", "global"]);
+const allowedSort = new Set(["newest", "oldest", "name"]);
+const allowedScopes = new Set(["company", "global"]);
+
+const getStored = (key, fallback, allowed) => {
+  if (typeof window === "undefined") return fallback;
+  const value = localStorage.getItem(key);
+  if (!value) return fallback;
+  if (allowed && !allowed.has(value)) return fallback;
+  return value;
+};
+
+function DocumentSkeleton() {
+  return (
+    <div className="stack surface" style={{ gap: "0.45rem", padding: "0.5rem" }}>
+      <div className="skeleton" style={{ width: "62%", height: "1rem" }} />
+      <div className="skeleton" style={{ width: "38%", height: "0.9rem" }} />
+      <div className="skeleton" style={{ width: "100%", height: "3.25rem" }} />
+    </div>
+  );
+}
 
 export default function AiClient({ session }) {
   const maxDocuments = Number(process.env.NEXT_PUBLIC_AI_MAX_DOCUMENTS || 5);
@@ -17,14 +45,16 @@ export default function AiClient({ session }) {
   const [useMemory, setUseMemory] = useState(false);
   const [meta, setMeta] = useState(null);
   const [documents, setDocuments] = useState([]);
-  const [documentFilter, setDocumentFilter] = useState("all");
+  const [documentFilter, setDocumentFilter] = useState(() =>
+    getStored(STORAGE_KEYS.filter, "all", allowedFilters),
+  );
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState(() => getStored(STORAGE_KEYS.sort, "newest", allowedSort));
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
   const [docStatus, setDocStatus] = useState({ state: "idle" });
-  const [docScope, setDocScope] = useState("company");
+  const [docScope, setDocScope] = useState(() => getStored(STORAGE_KEYS.scope, "company", allowedScopes));
   const [documentsLoadedAt, setDocumentsLoadedAt] = useState(null);
   const fileInputRef = useRef(null);
   const messageListRef = useRef(null);
@@ -40,6 +70,21 @@ export default function AiClient({ session }) {
     if (!Array.isArray(documents) || documents.length === 0) return;
     setSelectedDocs((prev) => prev.filter((id) => documents.some((doc) => doc.id === id)));
   }, [documents]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(STORAGE_KEYS.scope, docScope);
+  }, [docScope]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(STORAGE_KEYS.filter, documentFilter);
+  }, [documentFilter]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(STORAGE_KEYS.sort, sortBy);
+  }, [sortBy]);
 
   useEffect(() => {
     const loadAiStatus = async () => {
@@ -401,46 +446,57 @@ export default function AiClient({ session }) {
             {uploadStatus.state === "success" && <div className="status-success">{uploadStatus.message}</div>}
 
             <div className="stack" style={{ gap: "0.35rem", maxHeight: "220px", overflow: "auto" }}>
-              {documentsLoading && <div className="muted tiny">Loading documents…</div>}
+              {documentsLoading && (
+                <div className="stack" style={{ gap: "0.35rem" }}>
+                  {[...Array(3)].map((_, idx) => (
+                    <DocumentSkeleton key={`doc-skel-${idx}`} />
+                  ))}
+                </div>
+              )}
               {!documentsLoading && filteredDocs.length === 0 && (
                 <div className="muted tiny">{documents.length === 0 ? "No documents uploaded yet" : "No documents match this filter"}</div>
               )}
-              {filteredDocs.map((doc) => (
-                <div key={doc.id} className="stack surface" style={{ gap: "0.35rem", padding: "0.5rem" }}>
-                  <label className="chip-row" style={{ gap: "0.4rem", alignItems: "start" }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedDocs.includes(doc.id)}
-                      onChange={() => toggleDocument(doc.id)}
-                    />
-                    <div className="stack" style={{ gap: "0.1rem" }}>
-                      <strong className="tiny">{doc.filename || "Document"}</strong>
-                      <span className="tiny muted">{doc.excerpt || "No preview"}</span>
+              {!documentsLoading &&
+                filteredDocs.map((doc) => {
+                  const createdAt = formatDateTime(doc.created_at, "Timestamp pending");
+                  return (
+                    <div key={doc.id} className="stack surface" style={{ gap: "0.35rem", padding: "0.5rem" }}>
+                      <label className="chip-row" style={{ gap: "0.4rem", alignItems: "start" }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedDocs.includes(doc.id)}
+                          onChange={() => toggleDocument(doc.id)}
+                        />
+                        <div className="stack" style={{ gap: "0.1rem" }}>
+                          <strong className="tiny">{doc.filename || "Document"}</strong>
+                          <span className="tiny muted">{doc.excerpt || "No preview"}</span>
+                        </div>
+                      </label>
+                      <div className="chip-row" style={{ justifyContent: "space-between", gap: "0.35rem", flexWrap: "wrap" }}>
+                        <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                          <span className={doc.scope === "global" ? "pill pill-outline" : "pill"}>
+                            {doc.scope === "global" ? "Global training" : "Company"}
+                          </span>
+                          {doc.size && <span className="tiny muted">{Math.round(doc.size / 1024)} KB</span>}
+                          <span className="tiny muted">{createdAt}</span>
+                        </div>
+                        <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap" }}>
+                          <select
+                            value={doc.scope || "company"}
+                            onChange={(event) => updateScope(doc, event.target.value)}
+                            className="secondary"
+                          >
+                            <option value="company">Company</option>
+                            <option value="global">Global</option>
+                          </select>
+                          <button type="button" className="secondary" onClick={() => removeDocument(doc)}>
+                            Remove
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </label>
-                  <div className="chip-row" style={{ justifyContent: "space-between", gap: "0.35rem", flexWrap: "wrap" }}>
-                    <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
-                      <span className={doc.scope === "global" ? "pill pill-outline" : "pill"}>
-                        {doc.scope === "global" ? "Global training" : "Company"}
-                      </span>
-                      {doc.size && <span className="tiny muted">{Math.round(doc.size / 1024)} KB</span>}
-                    </div>
-                    <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap" }}>
-                      <select
-                        value={doc.scope || "company"}
-                        onChange={(event) => updateScope(doc, event.target.value)}
-                        className="secondary"
-                      >
-                        <option value="company">Company</option>
-                        <option value="global">Global</option>
-                      </select>
-                      <button type="button" className="secondary" onClick={() => removeDocument(doc)}>
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
             {docStatus.state === "error" && <div className="status-error">{docStatus.message}</div>}
             {docStatus.state === "success" && <div className="status-success">{docStatus.message}</div>}
