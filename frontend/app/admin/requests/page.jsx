@@ -5,6 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
 
+function formatTimestamp(value) {
+  if (!value) return "Timestamp pending";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Timestamp pending";
+  return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+}
+
 function RequestsCard({ title, description, items, loading, error, total }) {
   const filteredOut = typeof total === "number" && total > 0 && (items?.length || 0) === 0;
   return (
@@ -48,7 +55,7 @@ function RequestsCard({ title, description, items, loading, error, total }) {
               <div className="stack" style={{ gap: "0.1rem" }}>
                 <div className="strong">{item.email}</div>
                 {item.note && <div className="muted tiny">Note: {item.note}</div>}
-                <div className="muted tiny">{new Date(item.created_at).toLocaleString()}</div>
+                <div className="muted tiny">{formatTimestamp(item.created_at || item.createdAt)}</div>
               </div>
             </div>
           ))}
