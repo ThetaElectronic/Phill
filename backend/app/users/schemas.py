@@ -20,6 +20,7 @@ class UserCreate(UserBase):
 
 class UserRead(UserBase):
     company_id: str
+    company_name: str | None = None
     id: str
     disabled: bool
     created_at: datetime

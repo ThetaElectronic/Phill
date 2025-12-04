@@ -63,7 +63,7 @@ export default function AdminUsersPage() {
         const matchesRole = roleFilter === "all" || user.role === roleFilter;
         const matchesCompany = companyFilter === "all" || user.company_id === companyFilter;
         if (!query) return matchesRole && matchesCompany;
-        const haystack = `${user.name} ${user.email} ${user.username || ""} ${companyMap.get(user.company_id) || ""}`.toLowerCase();
+        const haystack = `${user.name} ${user.email} ${user.username || ""} ${user.company_name || ""} ${companyMap.get(user.company_id) || ""}`.toLowerCase();
         return matchesRole && matchesCompany && haystack.includes(query);
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -459,7 +459,8 @@ export default function AdminUsersPage() {
               {filteredUsers.map((user) => {
                 const draft = editDrafts[user.id];
                 const editing = Boolean(draft);
-                const companyName = companyMap.get(user.company_id) || user.company_id || "Company";
+                const companyName =
+                  user.company_name || companyMap.get(user.company_id) || user.company_id || "Company";
                 return (
                   <div key={user.id} className="card glass stack" style={{ gap: "0.45rem" }}>
                     <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>

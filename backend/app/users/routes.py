@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
+from app.companies.models import Company
 from app.db import get_session
 from app.security.dependencies import get_current_active_user, require_role
 from app.users.models import User
@@ -19,6 +20,13 @@ from app.security.password import hash_password, verify_password
 router = APIRouter()
 
 
+def _company_names(session: Session, company_ids: set[str]) -> dict[str, str]:
+    if not company_ids:
+        return {}
+    rows = session.exec(select(Company).where(Company.id.in_(company_ids))).all()
+    return {row.id: row.name for row in rows}
+
+
 @router.post("/", response_model=UserRead)
 def register_user(
     payload: UserCreate,
@@ -33,6 +41,8 @@ def register_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot assign higher role than your own")
 
     user = create_user(payload, session, company_id=target_company_id)
+    company_names = _company_names(session, {user.company_id})
+    user.company_name = company_names.get(user.company_id)
     return UserRead.model_validate(user)
 
 
@@ -50,6 +60,11 @@ def list_users(
         query = query.where(User.company_id == current_user.company_id)
 
     users = session.exec(query).all()
+    company_ids = {user.company_id for user in users}
+    company_names = _company_names(session, company_ids)
+    for user in users:
+        user.company_name = company_names.get(user.company_id)
+
     return [UserRead.model_validate(user) for user in users]
 
 
@@ -102,6 +117,8 @@ def update_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is outside your company")
 
     updated = update_user_admin(target, payload, session, company_id=target_company)
+    company_names = _company_names(session, {updated.company_id})
+    updated.company_name = company_names.get(updated.company_id)
     return UserRead.model_validate(updated)
 
 
@@ -112,6 +129,8 @@ def update_current_user(
     current_user: User = Depends(get_current_active_user),
 ) -> UserRead:
     user = update_profile(payload, session, current_user=current_user)
+    company_names = _company_names(session, {user.company_id})
+    user.company_name = company_names.get(user.company_id)
     return UserRead.model_validate(user)
 
 
