@@ -82,6 +82,16 @@ export default async function DashboardPage() {
             )}
             <a className="secondary" href="/documents">Training files</a>
           </div>
+          <div className="chip-row" style={{ justifyContent: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
+            <ThemeToggle className="secondary" />
+            <a className="secondary" href="/account">Account</a>
+            {data.profile?.role === "admin" && (
+              <a className="secondary" href="/admin">
+                Admin workspace
+              </a>
+            )}
+            <a className="secondary" href="/documents">Training files</a>
+          </div>
           {data.error && <div className="status-error">{data.error}</div>}
         </div>
 
