@@ -53,6 +53,18 @@ function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
   const [expanded, setExpanded] = useState(false);
   const [copyState, setCopyState] = useState("idle");
 
+  const handleDownload = () => {
+    const text = doc.text || doc.excerpt;
+    if (!text) return;
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${doc.filename || "training"}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleCopy = async (text) => {
     if (!text) return;
     try {
@@ -106,6 +118,9 @@ function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
               {expanded ? doc.text : doc.excerpt || doc.text.slice(0, 300)}
             </div>
             <div className="chip-row" style={{ justifyContent: "flex-end" }}>
+              <button type="button" className="ghost" onClick={handleDownload}>
+                Download text
+              </button>
               <button type="button" className="ghost" onClick={() => handleCopy(doc.text || doc.excerpt)}>
                 {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy text"}
               </button>
