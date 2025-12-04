@@ -280,6 +280,7 @@ export default function AiClient({ session }) {
   };
 
   const aiReady = aiStatus?.ok !== false;
+  const aiCheckedLabel = formatDateTime(aiStatus?.checked_at, null);
   const filteredDocs = Array.isArray(documents)
     ? documents
         .filter((doc) =>
@@ -313,7 +314,10 @@ export default function AiClient({ session }) {
         <div className="card glass stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
             <span className="pill">Phill AI</span>
-            <span className="pill pill-outline">Workspace chat</span>
+            <span className={`status-chip ${aiReady ? "ok" : "error"}`}>
+              {aiReady ? "Ready" : "Needs setup"}
+            </span>
+            {aiStatus?.model && <span className="pill pill-outline">{aiStatus.model}</span>}
           </div>
           <div className="stack" style={{ gap: "0.15rem" }}>
             <h1 style={{ margin: 0 }}>Chat and training files</h1>
@@ -321,7 +325,12 @@ export default function AiClient({ session }) {
               Keep uploads tidy, choose scope, attach what you need, and save responses to your personal memory when helpful.
             </p>
           </div>
-          {!aiReady && <div className="status-error">AI is not ready yet. Check credentials in diagnostics.</div>}
+          {!aiReady && (
+            <div className="status-error">
+              {aiStatus?.detail || "AI is not ready yet. Add your OpenAI key and model in the environment."}
+            </div>
+          )}
+          {aiCheckedLabel && <span className="tiny muted">Checked {aiCheckedLabel}</span>}
         </div>
 
         <div className="grid two-col" style={{ gap: "1rem" }}>

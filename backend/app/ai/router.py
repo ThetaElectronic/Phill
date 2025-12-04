@@ -1,5 +1,5 @@
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -29,7 +29,9 @@ router = APIRouter()
 def ai_status() -> dict[str, Any]:
     """Expose AI configuration readiness for the UI."""
 
-    return ai_configuration()
+    status = ai_configuration()
+    status["checked_at"] = datetime.now(timezone.utc).isoformat()
+    return status
 
 
 @router.post("/chat", response_model=ChatResponse)
