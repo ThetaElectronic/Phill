@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth, apiUrl } from "../../lib/api";
 import { loadTokens } from "../../lib/auth";
+import { formatTime, safeDate } from "../../lib/dates";
 
 export default function AiClient({ session }) {
   const maxDocuments = Number(process.env.NEXT_PUBLIC_AI_MAX_DOCUMENTS || 5);
@@ -243,15 +244,13 @@ export default function AiClient({ session }) {
           if (sortBy === "name") {
             return (a.filename || "").localeCompare(b.filename || "");
           }
-          const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
-          const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+          const aDate = safeDate(a.created_at)?.getTime() || 0;
+          const bDate = safeDate(b.created_at)?.getTime() || 0;
           return newerFirst ? bDate - aDate : aDate - bDate;
         })
     : [];
 
-  const lastLoadedLabel = documentsLoadedAt
-    ? documentsLoadedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
-    : null;
+  const lastLoadedLabel = formatTime(documentsLoadedAt, "Not yet loaded");
 
   return (
     <AuthWall session={tokens} title="AI chat is protected" description="Sign in to use Phill AI with tenant-scoped memory.">

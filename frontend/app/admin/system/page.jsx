@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
+import { formatDateTime, formatTime, safeDate } from "../../../lib/dates";
 
 function StatusPill({ ok, label }) {
   const className = ok ? "pill pill-success" : "pill pill-outline";
@@ -54,7 +55,8 @@ export default function AdminSystemPage() {
       const payload = await res.json();
       if (allowUpdate) {
         setData(payload);
-        setLastUpdated(payload.checked_at ? new Date(payload.checked_at) : new Date());
+        const checked = safeDate(payload.checked_at) || new Date();
+        setLastUpdated(checked);
       }
     } catch (err) {
       if (allowUpdate) setError(err.message || "Unable to load status");
@@ -130,11 +132,9 @@ export default function AdminSystemPage() {
           <button type="button" className="secondary" onClick={load} disabled={loading}>
             {loading ? "Refreshing…" : "Refresh now"}
           </button>
-          {lastUpdated && (
-            <span className="tiny muted">
-              Updated {lastUpdated.toLocaleTimeString()} ({lastUpdated.toLocaleDateString()})
-            </span>
-          )}
+          <span className="tiny muted">
+            Updated {formatDateTime(lastUpdated, "Not yet checked")}
+          </span>
         </div>
 
         {loading && <div className="status-info">Loading live status…</div>}
@@ -145,11 +145,9 @@ export default function AdminSystemPage() {
             <StatusPill ok={overallHealthy} label={overallHealthy ? "All systems healthy" : "Needs attention"} />
             <span className="pill pill-outline">Env: {environment}</span>
             <span className="pill pill-outline">Version: {version}</span>
-            {lastUpdated && (
-              <span className="tiny muted">
-                Checked {lastUpdated.toLocaleTimeString()} ({lastUpdated.toLocaleDateString()})
-              </span>
-            )}
+            <span className="tiny muted">
+              Checked {formatDateTime(lastUpdated, "Not yet checked")}
+            </span>
           </section>
         )}
 

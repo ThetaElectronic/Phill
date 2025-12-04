@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
+import { formatDateTime, formatTime, safeDate } from "../../../lib/dates";
 
 const filters = [
   { value: "all", label: "All" },
@@ -48,7 +49,7 @@ function SkeletonCard() {
 }
 
 function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
-  const created = useMemo(() => (doc?.created_at ? new Date(doc.created_at) : null), [doc.created_at]);
+  const created = useMemo(() => safeDate(doc?.created_at), [doc.created_at]);
   const [expanded, setExpanded] = useState(false);
   const [copyState, setCopyState] = useState("idle");
 
@@ -87,9 +88,7 @@ function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
       <div className="stack" style={{ gap: "0.15rem" }}>
         <strong>{doc.filename}</strong>
         <div className="tiny muted" style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-          <span>
-            Uploaded {created ? `${created.toLocaleDateString()} ${created.toLocaleTimeString()}` : "timestamp pending"}
-          </span>
+          <span>Uploaded {formatDateTime(created)}</span>
           <span>Type: {doc.content_type || "unknown"}</span>
         </div>
         {doc.text ? (
@@ -159,8 +158,8 @@ export default function AdminDocumentsPage() {
     const sorted = [...filteredDocs];
     sorted.sort((a, b) => {
       if (sort === "name") return a.filename.localeCompare(b.filename);
-      const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+      const aDate = safeDate(a.created_at)?.getTime() || 0;
+      const bDate = safeDate(b.created_at)?.getTime() || 0;
       if (sort === "oldest") return aDate - bDate;
       return bDate - aDate;
     });
@@ -281,11 +280,9 @@ export default function AdminDocumentsPage() {
                     </button>
                   ))}
                 </div>
-                {lastLoaded && (
-                  <span className="tiny muted" aria-live="polite">
-                    Updated {lastLoaded.toLocaleTimeString()}
-                  </span>
-                )}
+                <span className="tiny muted" aria-live="polite">
+                  Updated {formatTime(lastLoaded, "Not yet loaded")}
+                </span>
                 <span className="muted tiny">
                   {visibleDocs.length
                     ? `${visibleDocs.length} shown${documents.length !== visibleDocs.length ? ` of ${documents.length}` : ""}`

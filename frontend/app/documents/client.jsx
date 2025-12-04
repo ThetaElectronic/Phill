@@ -5,6 +5,119 @@ import { useEffect, useMemo, useState } from "react";
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth } from "../../lib/api";
 import { loadTokens } from "../../lib/auth";
+import { formatDateTime, formatTime, safeDate } from "../../lib/dates";
+
+const filters = [
+  { value: "all", label: "All" },
+  { value: "company", label: "Company" },
+  { value: "global", label: "Global" },
+];
+
+const sorters = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "name", label: "Name" },
+];
+
+function formatBytes(bytes) {
+  if (!bytes && bytes !== 0) return "?";
+  const units = [
+    { value: 1024 * 1024 * 1024, label: "GB" },
+    { value: 1024 * 1024, label: "MB" },
+    { value: 1024, label: "KB" },
+  ];
+  for (const unit of units) {
+    if (bytes >= unit.value) return `${(bytes / unit.value).toFixed(1)} ${unit.label}`;
+  }
+  return `${bytes} B`;
+}
+
+function DocumentCard({ doc }) {
+  const created = useMemo(() => safeDate(doc?.created_at), [doc.created_at]);
+  const [expanded, setExpanded] = useState(false);
+  const [copyState, setCopyState] = useState("idle");
+
+  const handleCopy = async (text) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 1600);
+    } catch (error) {
+      console.error("Copy failed", error);
+      setCopyState("error");
+      setTimeout(() => setCopyState("idle"), 1600);
+    }
+  };
+
+  return (
+    <div className="card surface stack" style={{ gap: "0.5rem" }}>
+      <div className="chip-row" style={{ alignItems: "center", justifyContent: "space-between" }}>
+        <div className="badge-list" style={{ gap: "0.35rem" }}>
+          <span className="pill">{doc.filename}</span>
+          <span className="pill pill-outline">{formatBytes(doc.size)}</span>
+          <span className={`pill ${doc.scope === "global" ? "pill-success" : "pill-soft"}`}>
+            {doc.scope === "global" ? "Global training" : "Company"}
+          </span>
+        </div>
+        <span className="tiny muted" style={{ whiteSpace: "nowrap" }}>
+          {formatDateTime(created)}
+        </span>
+      </div>
+      <div className="stack" style={{ gap: "0.25rem" }}>
+        {doc.text ? (
+          <>
+            <p className="tiny muted" style={{ margin: 0 }}>
+              {expanded ? "Stored training text" : "Excerpt"}
+            </p>
+            <div
+              className="tiny muted card"
+              style={{
+                whiteSpace: "pre-wrap",
+                margin: 0,
+                maxHeight: expanded ? "24rem" : "6rem",
+                overflow: "auto",
+              }}
+            >
+              {expanded ? doc.text : doc.excerpt || doc.text.slice(0, 300)}
+            </div>
+            <div className="chip-row" style={{ justifyContent: "flex-end" }}>
+              <button type="button" className="ghost" onClick={() => handleCopy(doc.text || doc.excerpt)}>
+                {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy text"}
+              </button>
+              <button type="button" className="ghost" onClick={() => setExpanded((prev) => !prev)}>
+                {expanded ? "Hide text" : "View full text"}
+              </button>
+            </div>
+          </>
+        ) : doc.excerpt ? (
+          <p className="tiny muted" style={{ margin: 0 }}>
+            {doc.excerpt}
+          </p>
+        ) : (
+          <p className="tiny muted" style={{ margin: 0 }}>
+            No preview available.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DocumentSkeleton() {
+  return (
+    <div className="card surface stack" style={{ gap: "0.75rem" }}>
+      <div className="chip-row" style={{ gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
+        <div className="skeleton" style={{ width: "30%", height: "1rem" }} />
+        <div className="skeleton" style={{ width: "12%", height: "0.9rem" }} />
+        <div className="skeleton" style={{ width: "18%", height: "0.9rem" }} />
+        <div className="skeleton" style={{ width: "22%", height: "0.9rem" }} />
+      </div>
+      <div className="skeleton" style={{ width: "55%", height: "0.9rem" }} />
+      <div className="skeleton" style={{ width: "100%", height: "5rem" }} />
+    </div>
+  );
+}
 
 const filters = [
   { value: "all", label: "All" },
@@ -141,8 +254,8 @@ export default function DocumentsClient({ session }) {
     const sorted = [...filteredDocs];
     sorted.sort((a, b) => {
       if (sort === "name") return a.filename.localeCompare(b.filename);
-      const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+      const aDate = safeDate(a.created_at)?.getTime() || 0;
+      const bDate = safeDate(b.created_at)?.getTime() || 0;
       if (sort === "oldest") return aDate - bDate;
       return bDate - aDate;
     });
@@ -253,11 +366,9 @@ export default function DocumentsClient({ session }) {
                     </button>
                   ))}
                 </div>
-                {lastLoaded && (
-                  <span className="tiny muted" aria-live="polite">
-                    Updated {lastLoaded.toLocaleTimeString()}
-                  </span>
-                )}
+                <span className="tiny muted" aria-live="polite">
+                  Updated {formatTime(lastLoaded, "Not yet loaded")}
+                </span>
                 <span className="muted tiny">
                   {shownCount ? `${shownCount} shown` : "No documents"}
                   {totalCount > shownCount && ` • ${totalCount} total`}

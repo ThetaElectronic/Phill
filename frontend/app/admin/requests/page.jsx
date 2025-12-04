@@ -4,13 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
-
-function formatTimestamp(value) {
-  if (!value) return "Timestamp pending";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Timestamp pending";
-  return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
-}
+import { formatDateTime, formatTime } from "../../../lib/dates";
 
 function RequestsCard({ title, description, items, loading, error, total }) {
   const filteredOut = typeof total === "number" && total > 0 && (items?.length || 0) === 0;
@@ -55,7 +49,7 @@ function RequestsCard({ title, description, items, loading, error, total }) {
               <div className="stack" style={{ gap: "0.1rem" }}>
                 <div className="strong">{item.email}</div>
                 {item.note && <div className="muted tiny">Note: {item.note}</div>}
-                <div className="muted tiny">{formatTimestamp(item.created_at || item.createdAt)}</div>
+                <div className="muted tiny">{formatDateTime(item.created_at || item.createdAt)}</div>
               </div>
             </div>
           ))}
@@ -180,9 +174,7 @@ export default function AdminRequestsPage() {
               <button type="button" className="secondary" onClick={load} disabled={loading}>
                 {loading ? "Refreshing…" : "Refresh"}
               </button>
-              {lastUpdated && (
-                <span className="tiny muted">Updated {lastUpdated.toLocaleTimeString()}</span>
-              )}
+              <span className="tiny muted">Updated {formatTime(lastUpdated, "Not yet loaded")}</span>
               {error && <span className="status-error">{error}</span>}
             </div>
           </div>
