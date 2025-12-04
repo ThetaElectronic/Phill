@@ -37,6 +37,7 @@ export default function AdminUsersPage() {
   const [companies, setCompanies] = useState([]);
   const [editDrafts, setEditDrafts] = useState({});
   const [editStatus, setEditStatus] = useState({});
+  const [welcomeStatus, setWelcomeStatus] = useState({});
 
   const isFounder = currentUser?.role === "founder";
 
@@ -142,6 +143,10 @@ export default function AdminUsersPage() {
     setPasswordStatus((prev) => ({ ...prev, [userId]: next }));
   };
 
+  const updateWelcomeStatus = (userId, next) => {
+    setWelcomeStatus((prev) => ({ ...prev, [userId]: next }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!canSubmit) return;
@@ -178,6 +183,33 @@ export default function AdminUsersPage() {
       setStatus({
         state: "error",
         message: error instanceof Error ? error.message : "Failed to create user",
+      });
+    }
+  };
+
+  const sendWelcomeEmail = async (userId) => {
+    updateWelcomeStatus(userId, { state: "sending" });
+    try {
+      const res = await fetchWithAuth("/api/admin/email/welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        updateWelcomeStatus(userId, {
+          state: "error",
+          message: detail?.detail || `Unable to send welcome (${res.status})`,
+        });
+        return;
+      }
+
+      updateWelcomeStatus(userId, { state: "success", message: "Welcome email sent" });
+    } catch (error) {
+      updateWelcomeStatus(userId, {
+        state: "error",
+        message: error instanceof Error ? error.message : "Failed to send email",
       });
     }
   };
@@ -538,12 +570,32 @@ export default function AdminUsersPage() {
                         >
                           {passwordStatus[user.id]?.state === "saving" ? "Saving…" : "Set password"}
                         </button>
-                        {passwordStatus[user.id]?.state === "success" && (
-                          <span className="tiny status-success">{passwordStatus[user.id]?.message}</span>
-                        )}
-                        {passwordStatus[user.id]?.state === "error" && (
-                          <span className="tiny status-error">{passwordStatus[user.id]?.message}</span>
-                        )}
+                        <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                          {passwordStatus[user.id]?.state === "success" && (
+                            <span className="tiny status-success">{passwordStatus[user.id]?.message}</span>
+                          )}
+                          {passwordStatus[user.id]?.state === "error" && (
+                            <span className="tiny status-error">{passwordStatus[user.id]?.message}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="chip-row" style={{ gap: "0.35rem", justifyContent: "space-between", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => sendWelcomeEmail(user.id)}
+                          disabled={welcomeStatus[user.id]?.state === "sending"}
+                        >
+                          {welcomeStatus[user.id]?.state === "sending" ? "Sending…" : "Send welcome email"}
+                        </button>
+                        <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                          {welcomeStatus[user.id]?.state === "success" && (
+                            <span className="tiny status-success">{welcomeStatus[user.id]?.message}</span>
+                          )}
+                          {welcomeStatus[user.id]?.state === "error" && (
+                            <span className="tiny status-error">{welcomeStatus[user.id]?.message}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

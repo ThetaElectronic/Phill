@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
@@ -10,8 +12,8 @@ from app.communication.templates import get_or_create_template, update_template
 from app.communication.models import EmailTemplate
 from app.db import get_session
 from app.security.dependencies import require_role
-from app.users.permissions import ROLE_ADMIN
-from app.users.models import AccessRequest, PasswordResetRequest
+from app.users.permissions import ROLE_ADMIN, ROLE_FOUNDER, has_role
+from app.users.models import AccessRequest, PasswordResetRequest, User
 
 router = APIRouter()
 
@@ -63,8 +65,8 @@ class EmailTemplateRead(BaseModel):
         from_attributes = True
 
 
-class TestEmailPayload(BaseModel):
-    recipient: EmailStr
+class WelcomeEmailPayload(BaseModel):
+    user_id: UUID
 
 
 @router.get("/requests/access", response_model=list[AccessRequestRead])
@@ -182,3 +184,31 @@ async def send_template_preview(
         raise HTTPException(status_code=502, detail=f"Failed to send email: {exc}") from exc
 
     return {"status": "sent"}
+
+
+@router.post("/email/welcome")
+async def send_welcome_email(
+    payload: WelcomeEmailPayload,
+    session: Session = Depends(get_session),
+    current_user=Depends(require_role(ROLE_ADMIN)),
+) -> dict[str, str]:
+    if not smtp_configured():
+        raise HTTPException(status_code=503, detail="SMTP settings are not configured")
+
+    target = session.get(User, str(payload.user_id))
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not has_role(current_user.role, ROLE_FOUNDER) and target.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="User is outside your company")
+
+    template = get_or_create_template(session, "welcome_new_user")
+    subject = template.subject
+    body = template.body.replace("{name}", target.name or "there")
+
+    try:  # pragma: no cover - requires smtp backend
+        await send_plain_email(target.email, subject, body)
+    except Exception as exc:  # pragma: no cover - network dependent
+        raise HTTPException(status_code=502, detail=f"Failed to send email: {exc}") from exc
+
+    return {"status": "sent", "email": target.email}

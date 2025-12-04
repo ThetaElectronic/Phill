@@ -104,6 +104,14 @@ This repository contains the 2025 rebuild scaffold for Phill. Use the Docker com
 ### Admin email templates
 - Visit `/admin/email` to edit the **welcome email** template sent to newly created users. Subject/body changes save to the database and can be reset to the current version.
 - The same page lets you send a **test email** using the template with the configured SMTP credentials once `SMTP_*` environment variables are in place.
+- From the admin users page you can send the stored welcome template to any account you can manage. API equivalent:
+
+  ```bash
+  curl -X POST $NEXT_BACKEND_URL/api/admin/email/welcome \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{"user_id":"<target-user-uuid>"}'
+  ```
 
 ### Admin system status
 - Visit `/admin/system` to see live readiness for the database, SMTP, and AI configuration. The page calls `/api/admin/status` (admin-only), auto-refreshes every 30 seconds, and surfaces both an overall status banner and per-subsystem indicators along with the backend's latency buckets. A **Refresh now** button is available for immediate checks after configuration changes.
