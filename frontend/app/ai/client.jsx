@@ -18,7 +18,9 @@ function DocumentSkeleton() {
 }
 
 export default function AiClient({ session }) {
+  const maxDocuments = Number(process.env.NEXT_PUBLIC_AI_MAX_DOCUMENTS || 5);
   const [tokens] = useState(() => session || loadTokens());
+  const prefKey = (suffix) => preferenceKey(`ai-${suffix}`, tokens);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState({ state: "idle" });
@@ -459,7 +461,6 @@ export default function AiClient({ session }) {
                 {status.state === "loading" ? "Sending…" : "Send"}
               </button>
             </div>
-          </div>
 
           {status.state === "error" && <div className="status-error">{status.message}</div>}
           {status.state === "success" && <div className="status-success">Message sent</div>}
