@@ -13,11 +13,15 @@ function decodeBase64Json(segment) {
   }
 }
 
-export function decodeAccessExp(accessToken) {
+export function decodeAccessPayload(accessToken) {
   if (!accessToken) return null;
   const parts = accessToken.split(".");
   if (parts.length !== 3) return null;
-  const payload = decodeBase64Json(parts[1]);
+  return decodeBase64Json(parts[1]);
+}
+
+export function decodeAccessExp(accessToken) {
+  const payload = decodeAccessPayload(accessToken);
   if (!payload?.exp) return null;
   return new Date(payload.exp * 1000);
 }
@@ -80,6 +84,12 @@ export function bearerHeaders(tokens) {
   if (!tokens?.access_token) return {};
   const type = tokens.token_type || "Bearer";
   return { Authorization: `${type} ${tokens.access_token}` };
+}
+
+export function preferenceKey(base, tokens) {
+  const payload = decodeAccessPayload(tokens?.access_token);
+  const user = payload?.sub || "anon";
+  return `phill:${user}:${base}`;
 }
 
 export function shouldRefreshSoon(tokens, thresholdSeconds = 60) {

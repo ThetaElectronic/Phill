@@ -4,9 +4,17 @@ from sqlmodel import Session, select
 from app.db import get_session
 from app.security.dependencies import get_current_active_user, require_role
 from app.users.models import User
-from app.users.schemas import UserCreate, UserRead
-from app.users.service import create_user
+from app.users.schemas import (
+    PasswordChange,
+    PasswordSet,
+    UserAdminUpdate,
+    UserCreate,
+    UserRead,
+    UserUpdate,
+)
+from app.users.service import create_user, set_password, update_profile, update_user_admin
 from app.users.permissions import ROLE_MANAGER, ROLE_FOUNDER, has_role
+from app.security.password import hash_password, verify_password
 
 router = APIRouter()
 
@@ -43,3 +51,79 @@ def list_users(
 
     users = session.exec(query).all()
     return [UserRead.model_validate(user) for user in users]
+
+
+@router.post("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
+def set_user_password(
+    user_id: str,
+    payload: PasswordSet,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_role(ROLE_MANAGER)),
+) -> None:
+    target = session.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if not has_role(current_user.role, target.role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update a higher role")
+
+    if not has_role(current_user.role, ROLE_FOUNDER) and target.company_id != current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is outside your company")
+
+    set_password(target, payload, session)
+
+
+@router.patch("/{user_id}", response_model=UserRead)
+def update_user(
+    user_id: str,
+    payload: UserAdminUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_role(ROLE_MANAGER)),
+) -> UserRead:
+    target = session.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Cannot manage higher roles
+    if not has_role(current_user.role, target.role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot manage a higher role")
+
+    # Role elevation is limited to the acting admin's level
+    if payload.role and not has_role(current_user.role, payload.role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot assign higher role than your own")
+
+    # Company scoping
+    target_company = target.company_id
+    if has_role(current_user.role, ROLE_FOUNDER):
+        target_company = payload.company_id or target_company
+    elif payload.company_id and payload.company_id != target.company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot move users to another company")
+    elif target.company_id != current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is outside your company")
+
+    updated = update_user_admin(target, payload, session, company_id=target_company)
+    return UserRead.model_validate(updated)
+
+
+@router.patch("/me", response_model=UserRead)
+def update_current_user(
+    payload: UserUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> UserRead:
+    user = update_profile(payload, session, current_user=current_user)
+    return UserRead.model_validate(user)
+
+
+@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    payload: PasswordChange,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> None:
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is incorrect")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    session.add(current_user)
+    session.commit()
