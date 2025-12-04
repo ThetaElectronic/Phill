@@ -225,15 +225,14 @@ cp .env.example .env
 - Set `API_HOST=https://app.jarvis-fuel.com` and `FRONTEND_URL=https://app.jarvis-fuel.com`.
 - Keep `NEXT_PUBLIC_API_URL=/api` and `NEXT_BACKEND_URL=http://backend:8001` so the frontend proxies through Nginx to the backend container.
 - Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes) and trim stored document text with `AI_DOCUMENT_MAX_TEXT` (defaults to 20000 characters). SMTP supports `SMTP_STARTTLS` (default true) and `SMTP_USE_TLS` (implicit TLS, default false) for providers that require a specific mode.
-- Add your secrets for `JWT_SECRET`, `PASSWORD_PEPPER`, `SMTP_*`, `OPENAI_API_KEY`, and database credentials if you change the defaults. Optional: cap AI uploads with `AI_DOCUMENT_MAX_BYTES` (defaults to 512000 bytes) and trim stored document text with `AI_DOCUMENT_MAX_TEXT` (defaults to 20000 characters). SMTP supports `SMTP_STARTTLS` (default true) and `SMTP_USE_TLS` (implicit TLS, default false) for providers that require a specific mode.
 
 ### Fast AI key drop-in
 
 Add your OpenAI project key to `.env` (or the deployment secrets store) so Phill AI can answer chats and process training files:
 
 ```env
-# Swap this after testing; it's provided only for initial wiring
-OPENAI_API_KEY=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
+# Example placeholder (replace with your real project key)
+OPENAI_API_KEY=<your-openai-api-key>
 AI_MODEL=gpt-4o-mini
 ```
 
