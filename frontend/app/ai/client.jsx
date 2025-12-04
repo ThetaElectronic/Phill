@@ -4,14 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth, apiUrl } from "../../lib/api";
-import { loadTokens } from "../../lib/auth";
+import { loadTokens, preferenceKey } from "../../lib/auth";
 import { formatDateTime, formatRelative, formatTime, safeDate } from "../../lib/dates";
-
-const STORAGE_KEYS = {
-  scope: "ai-doc-scope",
-  filter: "ai-doc-filter",
-  sort: "ai-doc-sort",
-};
 
 const allowedFilters = new Set(["all", "company", "global"]);
 const allowedSort = new Set(["newest", "oldest", "name"]);
@@ -38,6 +32,7 @@ function DocumentSkeleton() {
 export default function AiClient({ session }) {
   const maxDocuments = Number(process.env.NEXT_PUBLIC_AI_MAX_DOCUMENTS || 5);
   const [tokens] = useState(() => session || loadTokens());
+  const prefKey = (suffix) => preferenceKey(`ai-${suffix}`, tokens);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState({ state: "idle" });
@@ -47,15 +42,15 @@ export default function AiClient({ session }) {
   const [meta, setMeta] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [documentFilter, setDocumentFilter] = useState(() =>
-    getStored(STORAGE_KEYS.filter, "all", allowedFilters),
+    getStored(prefKey("doc-filter"), "all", allowedFilters),
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState(() => getStored(STORAGE_KEYS.sort, "newest", allowedSort));
+  const [sortBy, setSortBy] = useState(() => getStored(prefKey("doc-sort"), "newest", allowedSort));
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
   const [docStatus, setDocStatus] = useState({ state: "idle" });
-  const [docScope, setDocScope] = useState(() => getStored(STORAGE_KEYS.scope, "company", allowedScopes));
+  const [docScope, setDocScope] = useState(() => getStored(prefKey("doc-scope"), "company", allowedScopes));
   const [documentsLoadedAt, setDocumentsLoadedAt] = useState(null);
   const fileInputRef = useRef(null);
   const messageListRef = useRef(null);
@@ -74,17 +69,17 @@ export default function AiClient({ session }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEYS.scope, docScope);
+    localStorage.setItem(prefKey("doc-scope"), docScope);
   }, [docScope]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEYS.filter, documentFilter);
+    localStorage.setItem(prefKey("doc-filter"), documentFilter);
   }, [documentFilter]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEYS.sort, sortBy);
+    localStorage.setItem(prefKey("doc-sort"), sortBy);
   }, [sortBy]);
 
   useEffect(() => {

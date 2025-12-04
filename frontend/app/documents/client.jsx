@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth } from "../../lib/api";
-import { loadTokens } from "../../lib/auth";
+import { loadTokens, preferenceKey } from "../../lib/auth";
 import { formatDateTime, formatRelative, formatTime, safeDate } from "../../lib/dates";
 
 const filters = [
@@ -136,12 +136,13 @@ function DocumentSkeleton() {
 
 export default function DocumentsClient({ session }) {
   const [tokens] = useState(() => session || loadTokens());
+  const prefKey = (name) => preferenceKey(name, tokens);
   const [documents, setDocuments] = useState([]);
   const [state, setState] = useState({ status: "idle" });
   const [filter, setFilter] = useState(() => {
     if (typeof window === "undefined") return "all";
     try {
-      const saved = JSON.parse(localStorage.getItem("phill-doc-prefs") || "{}");
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-doc-prefs")) || "{}");
       return filters.some((item) => item.value === saved.filter) ? saved.filter : "all";
     } catch (error) {
       console.warn("Unable to read document filter preference", error);
@@ -152,7 +153,7 @@ export default function DocumentsClient({ session }) {
   const [query, setQuery] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
-      const saved = JSON.parse(localStorage.getItem("phill-doc-prefs") || "{}");
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-doc-prefs")) || "{}");
       return typeof saved.query === "string" ? saved.query : "";
     } catch (error) {
       console.warn("Unable to read document search preference", error);
@@ -162,7 +163,7 @@ export default function DocumentsClient({ session }) {
   const [sort, setSort] = useState(() => {
     if (typeof window === "undefined") return "newest";
     try {
-      const saved = JSON.parse(localStorage.getItem("phill-doc-prefs") || "{}");
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-doc-prefs")) || "{}");
       return sorters.some((item) => item.value === saved.sort) ? saved.sort : "newest";
     } catch (error) {
       console.warn("Unable to read document sort preference", error);
@@ -195,7 +196,7 @@ export default function DocumentsClient({ session }) {
   useEffect(() => {
     try {
       localStorage.setItem(
-        "phill-doc-prefs",
+        prefKey("phill-doc-prefs"),
         JSON.stringify({ filter, query, sort })
       );
     } catch (error) {

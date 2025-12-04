@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import AdminWall from "../../../components/AdminWall";
 import { fetchWithAuth } from "../../../lib/api";
 import { formatDateTime, formatRelative, formatTime, safeDate } from "../../../lib/dates";
+import { loadTokens, preferenceKey } from "../../../lib/auth";
 
 const filters = [
   { value: "all", label: "All" },
@@ -151,13 +152,15 @@ function DocumentCard({ doc, onDelete, onScopeChange, busy }) {
 }
 
 export default function AdminDocumentsPage() {
+  const [tokens] = useState(() => loadTokens());
+  const prefKey = (name) => preferenceKey(name, tokens);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ state: "idle", message: "" });
   const [filter, setFilter] = useState(() => {
     if (typeof window === "undefined") return "all";
     try {
-      const saved = JSON.parse(localStorage.getItem("phill-admin-doc-prefs") || "{}");
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-admin-doc-prefs")) || "{}");
       return filters.some((item) => item.value === saved.filter) ? saved.filter : "all";
     } catch (error) {
       console.warn("Unable to read admin doc filter preference", error);
@@ -167,7 +170,7 @@ export default function AdminDocumentsPage() {
   const [query, setQuery] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
-      const saved = JSON.parse(localStorage.getItem("phill-admin-doc-prefs") || "{}");
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-admin-doc-prefs")) || "{}");
       return typeof saved.query === "string" ? saved.query : "";
     } catch (error) {
       console.warn("Unable to read admin doc search preference", error);
@@ -177,7 +180,7 @@ export default function AdminDocumentsPage() {
   const [sort, setSort] = useState(() => {
     if (typeof window === "undefined") return "newest";
     try {
-      const saved = JSON.parse(localStorage.getItem("phill-admin-doc-prefs") || "{}");
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-admin-doc-prefs")) || "{}");
       return sorters.some((item) => item.value === saved.sort) ? saved.sort : "newest";
     } catch (error) {
       console.warn("Unable to read admin doc sort preference", error);
@@ -211,7 +214,7 @@ export default function AdminDocumentsPage() {
   useEffect(() => {
     try {
       localStorage.setItem(
-        "phill-admin-doc-prefs",
+        prefKey("phill-admin-doc-prefs"),
         JSON.stringify({ filter, query, sort })
       );
     } catch (error) {
