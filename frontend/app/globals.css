@@ -155,6 +155,41 @@ header {
   z-index: 10;
 }
 
+.nav-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nav-actions {
+  flex-wrap: wrap;
+}
+
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.nav-toggle span {
+  width: 20px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 999px;
+  display: block;
+}
+
+.nav-toggle:hover {
+  background: var(--accent-soft);
+}
+
 .glass {
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(8px);
@@ -926,4 +961,42 @@ form {
   );
   transform: translateX(-100%);
   animation: shimmer 1.3s ease-in-out infinite;
+}
+
+@media (max-width: 860px) {
+  .shell {
+    padding: 0.85rem 1rem;
+  }
+
+  .nav-wrap {
+    position: absolute;
+    inset: 72px 0 auto 0;
+    padding: 0 1rem 1rem;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.1);
+  }
+
+  .nav-wrap.open {
+    display: flex;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.4rem;
+  }
+
+  .nav-actions {
+    justify-content: flex-start;
+    gap: 0.4rem;
+  }
 }

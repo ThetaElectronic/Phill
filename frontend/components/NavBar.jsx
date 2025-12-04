@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import LogoutButton from "./LogoutButton";
 import SessionIndicator from "./SessionIndicator";
 import ThemeToggle from "./ThemeToggle";
@@ -10,6 +11,11 @@ import ThemeToggle from "./ThemeToggle";
 export default function NavBar({ navLinks, userLabel }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   return (
     <header className="glass">
@@ -21,7 +27,20 @@ export default function NavBar({ navLinks, userLabel }) {
             <span className="muted tiny">Focused AI workspace</span>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+
+        <button
+          type="button"
+          className="nav-toggle"
+          aria-label="Toggle navigation"
+          aria-expanded={open}
+          onClick={() => setOpen((prev) => !prev)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <div className={`nav-wrap${open ? " open" : ""}`}>
           <nav className="nav chip-row" aria-label="Primary navigation">
             {navLinks.map((link) => {
               const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
@@ -37,7 +56,7 @@ export default function NavBar({ navLinks, userLabel }) {
               );
             })}
           </nav>
-          <div className="chip-row" style={{ alignItems: "center", gap: "0.25rem" }}>
+          <div className="chip-row nav-actions" style={{ alignItems: "center", gap: "0.25rem" }}>
             <ThemeToggle className="ghost" />
             <LogoutButton className="ghost" onLoggedOut={() => router.push("/login")} />
             <SessionIndicator label={userLabel} compact />
