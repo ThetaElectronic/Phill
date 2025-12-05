@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import LogoutButton from "./LogoutButton";
 import SessionIndicator from "./SessionIndicator";
 import ThemeToggle from "./ThemeToggle";
@@ -11,6 +11,7 @@ import ThemeToggle from "./ThemeToggle";
 export default function NavBar({ navLinks, userLabel, isAdmin = false }) {
   const pathname = usePathname();
   const router = useRouter();
+  const navId = useId();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -26,6 +27,19 @@ export default function NavBar({ navLinks, userLabel, isAdmin = false }) {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const previousOverflow = document.body.style.overflow;
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = previousOverflow || "";
+    }
+    return () => {
+      document.body.style.overflow = previousOverflow || "";
+    };
+  }, [open]);
 
   return (
     <header className="glass" aria-label="Primary site navigation">
@@ -43,6 +57,7 @@ export default function NavBar({ navLinks, userLabel, isAdmin = false }) {
           className="nav-toggle"
           aria-label="Toggle navigation"
           aria-expanded={open}
+          aria-controls={navId}
           onClick={() => setOpen((prev) => !prev)}
         >
           <span />
@@ -52,7 +67,7 @@ export default function NavBar({ navLinks, userLabel, isAdmin = false }) {
 
         {open && <button type="button" className="nav-overlay" aria-label="Close navigation" onClick={() => setOpen(false)} />}
 
-        <div className={`nav-wrap${open ? " open" : ""}`}>
+        <div className={`nav-wrap${open ? " open" : ""}`} id={navId}>
           <div className="nav-group" aria-label="Navigation">
             <span className="nav-label" aria-hidden>
               Menu
