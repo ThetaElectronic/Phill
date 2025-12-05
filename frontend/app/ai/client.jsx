@@ -235,7 +235,10 @@ export default function AiClient({ session }) {
         </div>
 
         <div className="card surface stack" style={{ gap: "0.75rem" }}>
-          <header className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+          <header
+            className="chip-row"
+            style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}
+          >
             <div className="stack" style={{ gap: "0.2rem" }}>
               <div className="badge-list">
                 <span className="pill">Attachments</span>
@@ -246,12 +249,7 @@ export default function AiClient({ session }) {
               </p>
             </div>
             <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="ghost"
-                onClick={loadDocuments}
-                disabled={documentsLoading}
-              >
+              <button type="button" className="ghost" onClick={loadDocuments} disabled={documentsLoading}>
                 {documentsLoading ? "Refreshing…" : "Refresh"}
               </button>
               <a className="secondary" href="/documents">
@@ -293,11 +291,13 @@ export default function AiClient({ session }) {
                 ))}
               </div>
             )}
+
             {!documentsLoading && filteredDocs.length === 0 && (
               <div className="muted tiny">
                 {documents.length === 0 ? "No documents uploaded yet" : "No documents match this filter"}
               </div>
             )}
+
             {!documentsLoading &&
               filteredDocs.map((doc) => {
                 const createdAt = formatDateTime(doc.created_at, "Timestamp pending");
@@ -327,6 +327,7 @@ export default function AiClient({ session }) {
                 );
               })}
           </div>
+
           {documentsError && <div className="status-error">{documentsError}</div>}
         </div>
 
@@ -347,6 +348,7 @@ export default function AiClient({ session }) {
               </button>
             )}
           </header>
+
           <label className="stack" style={{ gap: "0.35rem" }}>
             <span>Prompt</span>
             <textarea
@@ -362,6 +364,7 @@ export default function AiClient({ session }) {
               }}
             />
           </label>
+
           <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
             <label className="chip-row" style={{ gap: "0.35rem", alignItems: "center" }}>
               <input type="checkbox" checked={useMemory} onChange={(e) => setUseMemory(e.target.checked)} />
@@ -402,11 +405,7 @@ export default function AiClient({ session }) {
                       <div className="badge-list" style={{ marginBottom: "0.25rem" }}>
                         <span className="pill">{msg.role}</span>
                       </div>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => copyMessage(msg.content, key)}
-                      >
+                      <button type="button" className="ghost" onClick={() => copyMessage(msg.content, key)}>
                         {copiedMessage === key ? "Copied" : "Copy"}
                       </button>
                     </div>
