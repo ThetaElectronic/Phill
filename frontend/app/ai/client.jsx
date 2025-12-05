@@ -202,7 +202,11 @@ export default function AiClient({ session }) {
   const lastLoadedLabel = formatTime(documentsLoadedAt, "Not yet loaded");
 
   return (
-    <AuthWall session={tokens} title="AI chat is protected" description="Sign in to use Phill AI with tenant-scoped memory.">
+    <AuthWall
+      session={tokens}
+      title="AI chat is protected"
+      description="Sign in to use Phill AI with tenant-scoped memory."
+    >
       <section className="stack" style={{ gap: "1.25rem" }}>
         <div className="card glass stack" style={{ gap: "0.35rem" }}>
           <div className="badge-list">
@@ -314,7 +318,10 @@ export default function AiClient({ session }) {
                         <span className="tiny muted">{doc.excerpt || "No preview"}</span>
                       </div>
                     </label>
-                    <div className="chip-row" style={{ justifyContent: "space-between", gap: "0.35rem", flexWrap: "wrap" }}>
+                    <div
+                      className="chip-row"
+                      style={{ justifyContent: "space-between", gap: "0.35rem", flexWrap: "wrap" }}
+                    >
                       <div className="chip-row" style={{ gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
                         <span className={doc.scope === "global" ? "pill pill-outline" : "pill"}>
                           {doc.scope === "global" ? "Global training" : "Company"}
