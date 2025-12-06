@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { formatDateTime, safeDate } from "../lib/dates";
+
 import { apiUrl, getApiBase } from "../lib/api";
 import { clearTokens, loadTokens } from "../lib/auth";
 
@@ -12,14 +14,14 @@ function decodeExp(accessToken) {
   try {
     const payload = JSON.parse(atob(parts[1]));
     if (!payload?.exp) return null;
-    return new Date(payload.exp * 1000);
+    return safeDate(payload.exp * 1000);
   } catch (err) {
     console.warn("Unable to decode token exp", err);
     return null;
   }
 }
 
-export default function SessionIndicator() {
+export default function SessionIndicator({ label, compact = false }) {
   const [tokens, setTokens] = useState(null);
 
   useEffect(() => {
@@ -29,6 +31,18 @@ export default function SessionIndicator() {
   const expiry = useMemo(() => decodeExp(tokens?.access_token), [tokens]);
   const apiBase = useMemo(() => getApiBase(), []);
   const healthUrl = useMemo(() => apiUrl("/health"), []);
+
+  if (compact) {
+    return (
+      <div className="chip" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+        <span className={`status-dot ${tokens ? "dot-on" : "dot-off"}`} />
+        <span className="tiny muted" style={{ lineHeight: 1 }}>
+          {tokens ? "Authenticated" : "Signed out"}
+        </span>
+        {label ? <strong style={{ fontSize: "0.85rem" }}>{label}</strong> : null}
+      </div>
+    );
+  }
 
   return (
     <div className="session-card glass">
@@ -54,7 +68,7 @@ export default function SessionIndicator() {
           <div className="mono tiny token-inline">{tokens.access_token.slice(0, 22)}…</div>
           <div className="muted tiny" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <span>Refresh: {tokens.refresh_token ? "present" : "missing"}</span>
-            {expiry ? <span className="pill soft tiny">exp {expiry.toLocaleString()}</span> : null}
+            {expiry ? <span className="pill soft tiny">exp {formatDateTime(expiry)}</span> : null}
           </div>
         </div>
       ) : (
