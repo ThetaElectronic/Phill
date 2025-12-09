@@ -66,7 +66,7 @@ export default function AdminHomePage() {
           />
           <AdminCard
             title="Email"
-            description="Send a quick SMTP test before enabling notifications."
+            description="Edit onboarding templates and send a quick SMTP test before enabling notifications."
             href="/admin/email"
             badge="Notifications"
           />
