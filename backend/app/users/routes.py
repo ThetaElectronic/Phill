@@ -88,6 +88,31 @@ def set_user_password(
     set_password(target, payload, session)
 
 
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_role(ROLE_MANAGER)),
+) -> None:
+    target = session.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if target.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot delete your own account"
+        )
+
+    if not has_role(current_user.role, target.role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete a higher role")
+
+    if not has_role(current_user.role, ROLE_FOUNDER) and target.company_id != current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is outside your company")
+
+    session.delete(target)
+    session.commit()
+
+
 @router.patch("/{user_id}", response_model=UserRead)
 def update_user(
     user_id: str,
