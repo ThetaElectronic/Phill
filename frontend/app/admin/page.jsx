@@ -27,42 +27,30 @@ export default function AdminHomePage() {
             <span className="pill">Admin</span>
             <span className="pill pill-outline">Workspace</span>
           </div>
-          <h1 style={{ margin: 0 }}>Admin tools</h1>
+          <h1 style={{ margin: 0 }}>Keep Phill focused</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Focused controls for your team. Technical diagnostics stay separate so day-to-day views stay clean.
+            Quick admin shortcuts that keep Phill AI and its training files front and center, without extra clutter.
           </p>
         </div>
 
         <div className="grid two-col" style={{ gap: "1rem" }}>
           <AdminCard
-            title="System health"
-            description="Check database, SMTP, and AI readiness at a glance."
+            title="AI readiness"
+            description="Confirm database, SMTP, and model wiring so Phill can respond reliably."
             href="/admin/system"
             badge="Status"
           />
           <AdminCard
-            title="Diagnostics"
-            description="View raw payloads, latency details, and copy helpers for support."
-            href="/admin/diagnostics"
-            badge="Advanced"
-          />
-          <AdminCard
             title="Training files"
-            description="Review, scope, or remove uploaded AI documents."
+            description="Review, scope, or remove uploaded AI documents for any company."
             href="/admin/documents"
             badge="AI"
           />
           <AdminCard
-            title="Users"
-            description="List company users, add teammates, or reset passwords."
+            title="Accounts & access"
+            description="Manage users, reset passwords, and handle access requests from one place."
             href="/admin/users"
             badge="Accounts"
-          />
-          <AdminCard
-            title="Requests"
-            description="Review access and password reset submissions from the login page."
-            href="/admin/requests"
-            badge="Auth"
           />
           <AdminCard
             title="Email"
@@ -70,6 +58,16 @@ export default function AdminHomePage() {
             href="/admin/email"
             badge="Notifications"
           />
+        </div>
+
+        <div className="chip-row" style={{ gap: "0.6rem", flexWrap: "wrap" }}>
+          <span className="tiny muted">More tools:</span>
+          <a className="chip ghost" href="/admin/diagnostics">
+            Diagnostics
+          </a>
+          <a className="chip ghost" href="/admin/requests">
+            Requests
+          </a>
         </div>
       </section>
     </AdminWall>
