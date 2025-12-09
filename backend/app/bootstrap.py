@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Literal
 from uuid import uuid4
 
 from sqlmodel import Session, select
@@ -29,20 +30,17 @@ def _get_env(*keys: str) -> str | None:
     return None
 
 
-def bootstrap_founder_from_env() -> None:
-    """Create or update a founder account when env vars are provided."""
-
-    email = _get_env("BOOTSTRAP_FOUNDER_EMAIL", "BOOTSTRAP_EMAIL")
-    password = _get_env("BOOTSTRAP_FOUNDER_PASSWORD", "BOOTSTRAP_PASSWORD")
-    company_name = _get_env("BOOTSTRAP_FOUNDER_COMPANY", "BOOTSTRAP_COMPANY")
-    company_domain = _get_env("BOOTSTRAP_FOUNDER_DOMAIN", "BOOTSTRAP_DOMAIN")
-
-    if not all([email, password, company_name, company_domain]):
-        return
-
-    display_name = _get_env("BOOTSTRAP_FOUNDER_NAME", "BOOTSTRAP_NAME") or email
-    username = _get_env("BOOTSTRAP_FOUNDER_USERNAME", "BOOTSTRAP_USERNAME") or email
-    allow_updates = _env_flag("BOOTSTRAP_FOUNDER_UPDATE", "true")
+def bootstrap_founder(
+    *,
+    company_name: str,
+    company_domain: str,
+    email: str,
+    username: str | None,
+    password: str,
+    display_name: str | None = None,
+    update_if_exists: bool = False,
+) -> tuple[str, Literal["created", "updated", "exists"]]:
+    """Create or update a founder account and ensure the company exists."""
 
     with Session(engine) as session:
         company = session.exec(select(Company).where(Company.domain == company_domain)).first()
@@ -60,7 +58,7 @@ def bootstrap_founder_from_env() -> None:
             if user.role != ROLE_FOUNDER:
                 user.role = ROLE_FOUNDER
                 changed = True
-            if allow_updates:
+            if update_if_exists:
                 user.password_hash = hash_password(password)
                 user.username = username or user.username or email
                 user.name = display_name or user.name or username or email
@@ -70,19 +68,47 @@ def bootstrap_founder_from_env() -> None:
                 session.add(user)
                 session.commit()
                 logger.info("Founder account updated for %s", email)
-            else:
-                logger.info("Founder account already present for %s", email)
-            return
+                return user.email, "updated"
+
+            logger.info("Founder account already present for %s", email)
+            return user.email, "exists"
 
         founder = User(
             id=str(uuid4()),
             company_id=company.id,
             email=email,
-            username=username,
-            name=display_name,
+            username=username or email,
+            name=display_name or username or email,
             role=ROLE_FOUNDER,
             password_hash=hash_password(password),
         )
         session.add(founder)
         session.commit()
         logger.info("Founder account created for %s", email)
+        return founder.email, "created"
+
+
+def bootstrap_founder_from_env() -> None:
+    """Create or update a founder account when env vars are provided."""
+
+    email = _get_env("BOOTSTRAP_FOUNDER_EMAIL", "BOOTSTRAP_EMAIL")
+    password = _get_env("BOOTSTRAP_FOUNDER_PASSWORD", "BOOTSTRAP_PASSWORD")
+    company_name = _get_env("BOOTSTRAP_FOUNDER_COMPANY", "BOOTSTRAP_COMPANY")
+    company_domain = _get_env("BOOTSTRAP_FOUNDER_DOMAIN", "BOOTSTRAP_DOMAIN")
+
+    if not all([email, password, company_name, company_domain]):
+        return
+
+    display_name = _get_env("BOOTSTRAP_FOUNDER_NAME", "BOOTSTRAP_NAME") or email
+    username = _get_env("BOOTSTRAP_FOUNDER_USERNAME", "BOOTSTRAP_USERNAME") or email
+    allow_updates = _env_flag("BOOTSTRAP_FOUNDER_UPDATE", "true")
+
+    bootstrap_founder(
+        company_name=company_name,
+        company_domain=company_domain,
+        email=email,
+        username=username,
+        password=password,
+        display_name=display_name,
+        update_if_exists=allow_updates,
+    )
