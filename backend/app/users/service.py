@@ -6,6 +6,10 @@ from app.users.models import User
 from app.users.schemas import PasswordSet, UserAdminUpdate, UserCreate, UserUpdate
 
 
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
 def _ensure_unique(
     session: Session,
     *,
@@ -29,11 +33,12 @@ def _ensure_unique(
 
 
 def create_user(payload: UserCreate, session: Session, company_id: str) -> User:
-    username = payload.username or payload.email
-    _ensure_unique(session, email=payload.email, username=username)
+    email = _normalize_email(payload.email)
+    username = (payload.username or email).strip()
+    _ensure_unique(session, email=email, username=username)
     user = User(
         company_id=company_id,
-        email=payload.email,
+        email=email,
         username=username,
         name=payload.name,
         role=payload.role,
@@ -49,8 +54,9 @@ def update_profile(payload: UserUpdate, session: Session, current_user: User) ->
     changed = False
 
     if payload.email and payload.email != current_user.email:
-        _ensure_unique(session, email=payload.email, exclude_id=current_user.id)
-        current_user.email = payload.email
+        email = _normalize_email(payload.email)
+        _ensure_unique(session, email=email, exclude_id=current_user.id)
+        current_user.email = email
         changed = True
 
     if payload.name and payload.name != current_user.name:
@@ -84,8 +90,9 @@ def update_user_admin(
     changed = False
 
     if payload.email and payload.email != target.email:
-        _ensure_unique(session, email=payload.email, exclude_id=target.id)
-        target.email = payload.email
+        email = _normalize_email(payload.email)
+        _ensure_unique(session, email=email, exclude_id=target.id)
+        target.email = email
         changed = True
 
     if payload.name and payload.name != target.name:
