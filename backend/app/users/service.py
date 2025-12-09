@@ -53,11 +53,12 @@ def create_user(payload: UserCreate, session: Session, company_id: str) -> User:
 def update_profile(payload: UserUpdate, session: Session, current_user: User) -> User:
     changed = False
 
-    if payload.email and payload.email != current_user.email:
+    if payload.email:
         email = _normalize_email(payload.email)
-        _ensure_unique(session, email=email, exclude_id=current_user.id)
-        current_user.email = email
-        changed = True
+        if email != current_user.email:
+            _ensure_unique(session, email=email, exclude_id=current_user.id)
+            current_user.email = email
+            changed = True
 
     if payload.name and payload.name != current_user.name:
         current_user.name = payload.name
@@ -89,11 +90,12 @@ def update_user_admin(
 ) -> User:
     changed = False
 
-    if payload.email and payload.email != target.email:
+    if payload.email:
         email = _normalize_email(payload.email)
-        _ensure_unique(session, email=email, exclude_id=target.id)
-        target.email = email
-        changed = True
+        if email != target.email:
+            _ensure_unique(session, email=email, exclude_id=target.id)
+            target.email = email
+            changed = True
 
     if payload.name and payload.name != target.name:
         target.name = payload.name
