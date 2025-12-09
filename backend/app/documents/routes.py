@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlmodel import Session, select
 
 from app.db import get_session
@@ -9,6 +9,7 @@ from app.documents.schemas import DocumentCreate, DocumentRead
 from app.documents.upload import LocalDocumentStore
 from app.security.dependencies import get_current_active_user
 from app.users.models import User
+from app.users.permissions import ROLE_FOUNDER, has_role
 
 router = APIRouter()
 store = LocalDocumentStore(base_dir=Path("/tmp/uploads"))
@@ -58,8 +59,16 @@ def upload_document(
 
 @router.get("/", response_model=list[DocumentRead])
 def list_documents(
+    company_id: str | None = Query(default=None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ) -> list[DocumentRead]:
-    docs = session.exec(select(Document).where(Document.company_id == current_user.company_id)).all()
+    query = select(Document)
+    if has_role(current_user.role, ROLE_FOUNDER):
+        if company_id:
+            query = query.where(Document.company_id == company_id)
+    else:
+        query = query.where(Document.company_id == current_user.company_id)
+
+    docs = session.exec(query).all()
     return [DocumentRead.model_validate(doc) for doc in docs]
