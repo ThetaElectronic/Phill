@@ -213,6 +213,7 @@ export default function DocumentsClient({ session }) {
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
   const [companies, setCompanies] = useState({ state: "idle", items: [], message: "" });
   const fileInputRef = useRef(null);
+  const uploadScopeOptions = useMemo(() => (isFounder ? ["company", "global"] : ["company"]), [isFounder]);
 
   const filteredDocs = useMemo(() => {
     const scoped = filter === "all" ? documents : documents.filter((doc) => doc.scope === filter);
@@ -252,6 +253,12 @@ export default function DocumentsClient({ session }) {
   const isLoading = state.status === "loading";
   const showList = (state.status === "success" || (isLoading && shownCount)) && shownCount > 0;
   const showEmpty = state.status === "success" && shownCount === 0;
+
+  useEffect(() => {
+    if (!isFounder && uploadScope === "global") {
+      setUploadScope("company");
+    }
+  }, [isFounder, uploadScope]);
 
   useEffect(() => {
     if (!tokens) return;
@@ -426,11 +433,11 @@ export default function DocumentsClient({ session }) {
                   </div>
                   <p className="tiny muted" style={{ margin: 0 }}>
                     Select one or more files to add to Phill's training corpus. Founders can aim files at specific companies or
-                    train Phill AI site-wide.
+                    train Phill AI site-wide. Global uploads are restricted to founders.
                   </p>
                 </div>
                 <div className="chip-row" role="radiogroup" aria-label="Select upload scope">
-                  {["company", "global"].map((value) => (
+                  {uploadScopeOptions.map((value) => (
                     <button
                       key={value}
                       type="button"

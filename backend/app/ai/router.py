@@ -171,6 +171,8 @@ async def upload_documents(
         target_scope = resolved_scopes[idx] if resolved_scopes else default_scope
         if target_scope not in {"company", "global"}:
             raise HTTPException(status_code=400, detail="Invalid scope")
+        if target_scope == "global" and not has_role(current_user.role, ROLE_FOUNDER):
+            raise HTTPException(status_code=403, detail="Only founders can upload global training files")
 
         raw_bytes = await upload.read()
         if not raw_bytes:
@@ -273,6 +275,8 @@ def update_document_scope(
     scope = (payload.scope or "company").strip().lower()
     if scope not in {"company", "global"}:
         raise HTTPException(status_code=400, detail="Invalid scope")
+    if scope == "global" and not has_role(current_user.role, ROLE_FOUNDER):
+        raise HTTPException(status_code=403, detail="Only founders can manage global training scope")
 
     data["scope"] = scope
     record.data = data
