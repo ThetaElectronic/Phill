@@ -54,6 +54,7 @@ This repository contains the full Phill application: a FastAPI + Next.js stack w
   ```bash
   docker compose exec -T backend python scripts/bootstrap_admin.py --help
   ```
+- To guarantee the `admin@` account retains founder rights (and therefore access to the admin workspace), set the `BOOTSTRAP_FOUNDER_*` variables in your `.env` (see `.env.example`). On backend startup the app will create or update that founder account, aligning the company/domain, username, and password so you can immediately reach `/admin`.
 - API login options:
   - JSON: `curl -X POST $NEXT_BACKEND_URL/api/auth/login -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"your_password"}'`
   - OAuth2 form (used by the frontend): `curl -X POST $NEXT_BACKEND_URL/api/auth/token -H 'Content-Type: application/x-www-form-urlencoded' -d 'username=you@example.com&password=your_password'`
