@@ -2,7 +2,7 @@ import io
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pypdf import PdfReader
 from sqlmodel import Session, select
 
@@ -19,10 +19,48 @@ from app.ai.schemas import (
 from app.db import get_session
 from app.security.dependencies import get_current_active_user
 from app.users.models import User
+from app.users.permissions import ROLE_FOUNDER, has_role
 from app.ai.tables import AiMemory
 from app.config import get_settings
+from app.companies.models import Company
 
 router = APIRouter()
+
+
+def _resolve_company_ids(
+    requested: list[str] | None,
+    fallback: str | None,
+    current_user: User,
+) -> list[str]:
+    requested_ids = [value.strip() for value in (requested or []) if value and value.strip()]
+
+    if requested_ids and not has_role(current_user.role, ROLE_FOUNDER):
+        if current_user.company_id not in requested_ids:
+            raise HTTPException(status_code=403, detail="Cannot act on another company")
+        return [current_user.company_id]
+
+    target_company = fallback or current_user.company_id
+    if not target_company and not requested_ids:
+        raise HTTPException(status_code=400, detail="User is not linked to a company")
+
+    if requested_ids and not has_role(current_user.role, ROLE_FOUNDER):
+        raise HTTPException(status_code=403, detail="Cannot act on another company")
+
+    if not requested_ids:
+        return [target_company]
+
+    return sorted(set(requested_ids))
+
+
+def _resolve_company_id(requested: str | None, current_user: User) -> str:
+    return _resolve_company_ids([requested] if requested else [], requested, current_user)[0]
+
+
+def _company_names(session: Session, company_ids: set[str]) -> dict[str, str]:
+    if not company_ids:
+        return {}
+    rows = session.exec(select(Company).where(Company.id.in_(company_ids))).all()
+    return {row.id: row.name for row in rows}
 
 
 @router.get("/status")
@@ -75,9 +113,7 @@ def chat(
 
     safe_output = apply_safeguards(reply_text)
 
-    memory_company = request.company_id or current_user.company_id
-    if request.company_id and request.company_id != current_user.company_id:
-        raise HTTPException(status_code=403, detail="Cannot write memory for another company")
+    memory_company = _resolve_company_id(request.company_id, current_user)
 
     if memory_company and request.persist:
         memory = AiMemoryCreate(
@@ -102,11 +138,12 @@ async def upload_documents(
     file: UploadFile | None = File(default=None, alias="file"),
     scope: str | None = Form(default="company"),
     scopes: list[str] | None = Form(default=None, alias="scopes"),
+    company_id: str | None = Form(default=None),
+    company_ids: list[str] | None = Form(default=None, alias="company_ids"),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ) -> list[DocumentPayload]:
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User is not linked to a company")
+    target_companies = _resolve_company_ids(company_ids, company_id, current_user)
 
     upload_batch: list[UploadFile] = []
     if files:
@@ -128,6 +165,7 @@ async def upload_documents(
     settings = get_settings()
     max_size = int(settings.ai_document_max_bytes or 512_000)
     max_text = int(settings.ai_document_max_text or 20_000)
+    company_names = _company_names(session, set(target_companies))
 
     for idx, upload in enumerate(upload_batch):
         target_scope = resolved_scopes[idx] if resolved_scopes else default_scope
@@ -145,44 +183,54 @@ async def upload_documents(
         trimmed_text = (text or "").strip()[:max_text]
         excerpt = trimmed_text[:300]
 
-        memory = AiMemoryCreate(
-            company_id=current_user.company_id,
-            data={
-                "type": "document",
-                "scope": target_scope,
-                "filename": upload.filename,
-                "content_type": upload.content_type,
-                "size": len(raw_bytes),
-                "text": trimmed_text,
-                "excerpt": excerpt,
-            },
-        )
-        record = _store_memory(memory, session)
-        documents.append(_document_payload(record))
+        for company in target_companies:
+            memory = AiMemoryCreate(
+                company_id=company,
+                data={
+                    "type": "document",
+                    "scope": target_scope,
+                    "filename": upload.filename,
+                    "content_type": upload.content_type,
+                    "size": len(raw_bytes),
+                    "text": trimmed_text,
+                    "excerpt": excerpt,
+                },
+            )
+            record = _store_memory(memory, session)
+            documents.append(_document_payload(record, company_names))
 
     return documents
 
 
 @router.get("/documents", response_model=list[DocumentPayload])
 def list_documents(
+    company_id: str | None = Query(default=None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ) -> list[DocumentPayload]:
-    if not current_user.company_id:
+    if not current_user.company_id and not has_role(current_user.role, ROLE_FOUNDER):
         raise HTTPException(status_code=400, detail="User is not linked to a company")
 
+    target_company = company_id if has_role(current_user.role, ROLE_FOUNDER) else current_user.company_id
     records = session.exec(select(AiMemory).order_by(AiMemory.created_at.desc())).all()
-    documents: list[DocumentPayload] = []
+
+    visible: list[AiMemory] = []
     for record in records:
         data: dict[str, Any] = record.data or {}
         if data.get("type") != "document":
             continue
         scope = data.get("scope") or "company"
-        if record.company_id != current_user.company_id and scope != "global":
-            continue
-        documents.append(_document_payload(record))
 
-    return documents
+        if has_role(current_user.role, ROLE_FOUNDER):
+            if target_company and record.company_id != target_company and scope != "global":
+                continue
+        elif record.company_id != current_user.company_id and scope != "global":
+            continue
+
+        visible.append(record)
+
+    company_names = _company_names(session, {record.company_id for record in visible})
+    return [_document_payload(record, company_names) for record in visible]
 
 
 @router.delete("/documents/{document_id}", status_code=204)
@@ -192,7 +240,9 @@ def delete_document(
     current_user: User = Depends(get_current_active_user),
 ) -> None:
     record = session.get(AiMemory, document_id)
-    if not record or record.company_id != current_user.company_id:
+    if not record:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if record.company_id != current_user.company_id and not has_role(current_user.role, ROLE_FOUNDER):
         raise HTTPException(status_code=404, detail="Document not found")
 
     data: dict[str, Any] = record.data or {}
@@ -211,7 +261,9 @@ def update_document_scope(
     current_user: User = Depends(get_current_active_user),
 ) -> DocumentPayload:
     record = session.get(AiMemory, document_id)
-    if not record or record.company_id != current_user.company_id:
+    if not record:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if record.company_id != current_user.company_id and not has_role(current_user.role, ROLE_FOUNDER):
         raise HTTPException(status_code=404, detail="Document not found")
 
     data: dict[str, Any] = record.data or {}
@@ -228,7 +280,8 @@ def update_document_scope(
     session.commit()
     session.refresh(record)
 
-    return _document_payload(record)
+    company_names = _company_names(session, {record.company_id})
+    return _document_payload(record, company_names)
 
 
 def _store_memory(payload: AiMemoryCreate, session: Session) -> AiMemory:
@@ -239,7 +292,7 @@ def _store_memory(payload: AiMemoryCreate, session: Session) -> AiMemory:
     return memory
 
 
-def _document_payload(record: AiMemory) -> DocumentPayload:
+def _document_payload(record: AiMemory, company_names: dict[str, str] | None = None) -> DocumentPayload:
     data: dict[str, Any] = record.data or {}
     scope = data.get("scope") or "company"
     excerpt = data.get("excerpt") or (data.get("text") or "")[:300]
@@ -257,6 +310,7 @@ def _document_payload(record: AiMemory) -> DocumentPayload:
         text=data.get("text"),
         scope=scope,
         owner_company_id=record.company_id,
+        owner_company_name=(company_names or {}).get(record.company_id),
     )
 
 
@@ -309,7 +363,9 @@ def _load_documents(ids: list[str], current_user: User, session: Session) -> lis
         if data.get("type") != "document":
             raise HTTPException(status_code=400, detail="Referenced record is not a document")
         scope = data.get("scope") or "company"
-        if record.company_id != current_user.company_id and scope != "global":
+        if record.company_id != current_user.company_id and scope != "global" and not has_role(
+            current_user.role, ROLE_FOUNDER
+        ):
             raise HTTPException(status_code=403, detail="Cannot use another company's documents")
 
         documents.append(data)
