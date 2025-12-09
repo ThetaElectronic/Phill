@@ -188,7 +188,16 @@ export default function DocumentsClient({ session }) {
       return "newest";
     }
   });
-  const [uploadScope, setUploadScope] = useState("company");
+  const [uploadScope, setUploadScope] = useState(() => {
+    if (typeof window === "undefined") return "company";
+    try {
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-doc-prefs")) || "{}");
+      return saved.uploadScope === "global" ? "global" : "company";
+    } catch (error) {
+      console.warn("Unable to read upload scope preference", error);
+      return "company";
+    }
+  });
   const [uploadCompanies, setUploadCompanies] = useState(() => {
     if (typeof window === "undefined") return myCompanyId ? [myCompanyId] : [];
     try {
@@ -231,12 +240,12 @@ export default function DocumentsClient({ session }) {
     try {
       localStorage.setItem(
         prefKey("phill-doc-prefs"),
-        JSON.stringify({ filter, query, sort, companyFilter, uploadCompanies })
+        JSON.stringify({ filter, query, sort, companyFilter, uploadCompanies, uploadScope })
       );
     } catch (error) {
       console.warn("Unable to persist document preferences", error);
     }
-  }, [filter, query, sort, companyFilter, uploadCompanies]);
+  }, [filter, query, sort, companyFilter, uploadCompanies, uploadScope]);
 
   const totalCount = documents.length;
   const shownCount = visibleDocs.length;
@@ -323,8 +332,6 @@ export default function DocumentsClient({ session }) {
         const targets = uploadCompanies.filter(Boolean);
         if (targets.length === 0 && myCompanyId) formData.append("company_ids", myCompanyId);
         targets.forEach((id) => formData.append("company_ids", id));
-      } else if (isFounder && myCompanyId) {
-        formData.append("company_id", myCompanyId);
       }
 
       files.forEach((file) => formData.append("files", file));
@@ -418,8 +425,8 @@ export default function DocumentsClient({ session }) {
                     <span className="pill pill-outline">Multi-file</span>
                   </div>
                   <p className="tiny muted" style={{ margin: 0 }}>
-                    Select one or more files to add to Phill's training corpus. Choose whether they stay within your company,
-                    span multiple companies, or are available Phill-wide.
+                    Select one or more files to add to Phill's training corpus. Founders can aim files at specific companies or
+                    train Phill AI site-wide.
                   </p>
                 </div>
                 <div className="chip-row" role="radiogroup" aria-label="Select upload scope">
@@ -432,7 +439,7 @@ export default function DocumentsClient({ session }) {
                       role="radio"
                       aria-checked={uploadScope === value}
                     >
-                      {value === "company" ? "Company" : "Global"}
+                      {value === "company" ? "Company targeted" : "Phill-wide (global)"}
                     </button>
                   ))}
                 </div>
@@ -460,48 +467,50 @@ export default function DocumentsClient({ session }) {
                 <div className="stack" style={{ gap: "0.35rem" }}>
                   <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
                     <label className="tiny muted" htmlFor="upload-company">
-                      Upload target
+                      Upload targets
                     </label>
-                    {uploadScope === "global" ? (
-                      <span className="tiny muted">Phill-wide training (global scope)</span>
-                    ) : (
-                      <>
-                        <select
-                          id="upload-company"
-                          multiple
-                          value={uploadCompanies}
-                          onChange={(event) =>
-                            setUploadCompanies(Array.from(event.target.selectedOptions, (option) => option.value))
-                          }
-                          disabled={companies.state === "loading"}
-                          style={{ minWidth: "16rem" }}
-                        >
-                          <option value="">My company {myCompanyId ? `(${myCompanyId})` : ""}</option>
-                          {companies.items.map((company) => (
-                            <option key={company.id} value={company.id}>
-                              {company.name} {company.domain ? `(${company.domain})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() =>
-                            setUploadCompanies((prev) => {
-                              const isAll = companies.items.length && prev.length >= companies.items.length;
-                              if (isAll) return myCompanyId ? [myCompanyId] : [];
-                              return companies.items.map((company) => company.id);
-                            })
-                          }
-                          disabled={companies.state === "loading"}
-                        >
-                          {companies.items.length && uploadCompanies.length >= companies.items.length
-                            ? "Clear selection"
-                            : "Select all companies"}
-                        </button>
-                      </>
-                    )}
+                    <span className="tiny muted">
+                      {uploadScope === "global"
+                        ? "Training Phill AI across every company (global scope)."
+                        : "Select one or more companies to receive these files."}
+                    </span>
                   </div>
+                  <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+                    <select
+                      id="upload-company"
+                      multiple
+                      value={uploadCompanies}
+                      onChange={(event) => setUploadCompanies(Array.from(event.target.selectedOptions, (option) => option.value))}
+                      disabled={companies.state === "loading" || uploadScope === "global"}
+                      style={{ minWidth: "16rem" }}
+                    >
+                      <option value="">My company {myCompanyId ? `(${myCompanyId})` : ""}</option>
+                      {companies.items.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name} {company.domain ? `(${company.domain})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() =>
+                        setUploadCompanies((prev) => {
+                          const isAll = companies.items.length && prev.length >= companies.items.length;
+                          if (isAll) return myCompanyId ? [myCompanyId] : [];
+                          return companies.items.map((company) => company.id);
+                        })
+                      }
+                      disabled={companies.state === "loading" || uploadScope === "global"}
+                    >
+                      {companies.items.length && uploadCompanies.length >= companies.items.length
+                        ? "Clear selection"
+                        : "Select all companies"}
+                    </button>
+                  </div>
+                  {uploadScope === "global" && (
+                    <span className="tiny status-info">Company selection is ignored for Phill-wide uploads.</span>
+                  )}
                   {companies.state === "error" && companies.message && (
                     <span className="status-error tiny">{companies.message}</span>
                   )}
