@@ -31,6 +31,7 @@ class UserRead(UserBase):
 
 class UserUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
+    email: EmailStr | None = None
     username: str | None = Field(default=None, min_length=3)
 
 

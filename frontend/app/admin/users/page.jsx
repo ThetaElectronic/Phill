@@ -303,6 +303,7 @@ export default function AdminUsersPage() {
       ...prev,
       [user.id]: {
         name: user.name || "",
+        email: user.email || "",
         username: user.username || "",
         role: user.role,
         company_id: user.company_id,
@@ -338,6 +339,7 @@ export default function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: draft.name,
+          email: draft.email,
           username: draft.username,
           role: draft.role,
           company_id: isFounder ? draft.company_id : undefined,
@@ -604,6 +606,16 @@ export default function AdminUsersPage() {
                           type="text"
                           value={editing ? draft.name : user.name}
                           onChange={(event) => handleEditChange(user.id, "name", event.target.value)}
+                          onFocus={() => manageable && !editing && startEdit(user)}
+                          disabled={!manageable}
+                        />
+                      </label>
+                      <label className="stack" style={{ gap: "0.25rem" }}>
+                        Email
+                        <input
+                          type="email"
+                          value={editing ? draft.email : user.email || ""}
+                          onChange={(event) => handleEditChange(user.id, "email", event.target.value)}
                           onFocus={() => manageable && !editing && startEdit(user)}
                           disabled={!manageable}
                         />
