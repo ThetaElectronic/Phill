@@ -15,6 +15,7 @@ from app.communication.email import send_plain_email, smtp_configured
 from app.security.password import hash_password, verify_password
 from app.security.tokens import TokenType, create_access_token, create_refresh_token, decode_token
 from app.users.models import AccessRequest, PasswordResetRequest, PasswordResetToken, User
+from app.utils.email import normalize_email
 
 router = APIRouter()
 settings = get_settings()
@@ -49,7 +50,7 @@ class TokenLoginPayload(BaseModel):
 def _normalize_identifier(identifier: str) -> str:
     normalized = identifier.strip()
     if "@" in normalized:
-        return normalized.lower()
+        return normalize_email(normalized)
     return normalized
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from uuid import uuid4
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.companies.models import Company
@@ -10,6 +11,7 @@ from app.db import engine
 from app.security.password import hash_password
 from app.users.models import User
 from app.users.permissions import ROLE_ADMIN
+from app.utils.email import normalize_email
 
 
 def bootstrap_admin(
@@ -27,18 +29,21 @@ def bootstrap_admin(
     Returns (email, action) where action is "created", "updated", or "exists".
     """
 
+    normalized_email = normalize_email(email)
+
     with Session(engine) as session:
         company = session.exec(select(Company).where(Company.domain == company_domain)).first()
         if not company:
             company = Company(id=str(uuid4()), name=company_name, domain=company_domain)
             session.add(company)
 
-        user = session.exec(select(User).where(User.email == email)).first()
+        user = session.exec(select(User).where(func.lower(User.email) == normalized_email)).first()
         if user:
             if update_if_exists:
                 user.company_id = company.id
-                user.username = username or user.username or email
-                user.name = display_name or user.name or username or email
+                user.email = normalized_email
+                user.username = username or user.username or normalized_email
+                user.name = display_name or user.name or username or normalized_email
                 user.role = ROLE_ADMIN
                 user.password_hash = hash_password(password)
                 session.add(user)
@@ -50,9 +55,9 @@ def bootstrap_admin(
         admin = User(
             id=str(uuid4()),
             company_id=company.id,
-            email=email,
-            username=username or email,
-            name=display_name or username or email,
+            email=normalized_email,
+            username=username or normalized_email,
+            name=display_name or username or normalized_email,
             role=ROLE_ADMIN,
             password_hash=hash_password(password),
         )

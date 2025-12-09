@@ -7,6 +7,7 @@ import os
 from typing import Literal
 from uuid import uuid4
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.companies.models import Company
@@ -14,6 +15,7 @@ from app.db import engine
 from app.security.password import hash_password
 from app.users.models import User
 from app.users.permissions import ROLE_FOUNDER
+from app.utils.email import normalize_email
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,8 @@ def bootstrap_founder(
 ) -> tuple[str, Literal["created", "updated", "exists"]]:
     """Create or update a founder account and ensure the company exists."""
 
+    normalized_email = normalize_email(email)
+
     with Session(engine) as session:
         company = session.exec(select(Company).where(Company.domain == company_domain)).first()
         if not company:
@@ -53,9 +57,12 @@ def bootstrap_founder(
             session.add(company)
             logger.info("Created company %s for founder bootstrap", company.name)
 
-        user = session.exec(select(User).where(User.email == email)).first()
+        user = session.exec(select(User).where(func.lower(User.email) == normalized_email)).first()
         if user:
             changed = False
+            if user.email != normalized_email:
+                user.email = normalized_email
+                changed = True
             if user.company_id != company.id:
                 user.company_id = company.id
                 changed = True
@@ -64,31 +71,31 @@ def bootstrap_founder(
                 changed = True
             if update_if_exists:
                 user.password_hash = hash_password(password)
-                user.username = username or user.username or email
-                user.name = display_name or user.name or username or email
+                user.username = username or user.username or normalized_email
+                user.name = display_name or user.name or username or normalized_email
                 changed = True
 
             if changed:
                 session.add(user)
                 session.commit()
-                logger.info("Founder account updated for %s", email)
+                logger.info("Founder account updated for %s", normalized_email)
                 return user.email, "updated"
 
-            logger.info("Founder account already present for %s", email)
+            logger.info("Founder account already present for %s", normalized_email)
             return user.email, "exists"
 
         founder = User(
             id=str(uuid4()),
             company_id=company.id,
-            email=email,
-            username=username or email,
-            name=display_name or username or email,
+            email=normalized_email,
+            username=username or normalized_email,
+            name=display_name or username or normalized_email,
             role=ROLE_FOUNDER,
             password_hash=hash_password(password),
         )
         session.add(founder)
         session.commit()
-        logger.info("Founder account created for %s", email)
+        logger.info("Founder account created for %s", normalized_email)
         return founder.email, "created"
 
 
@@ -113,14 +120,15 @@ def bootstrap_founder_from_env() -> None:
         )
         return
 
-    display_name = _get_env("BOOTSTRAP_FOUNDER_NAME", "BOOTSTRAP_NAME") or email
-    username = _get_env("BOOTSTRAP_FOUNDER_USERNAME", "BOOTSTRAP_USERNAME") or email
+    normalized_email = normalize_email(email)
+    display_name = _get_env("BOOTSTRAP_FOUNDER_NAME", "BOOTSTRAP_NAME") or normalized_email
+    username = _get_env("BOOTSTRAP_FOUNDER_USERNAME", "BOOTSTRAP_USERNAME") or normalized_email
     allow_updates = _env_flag("BOOTSTRAP_FOUNDER_UPDATE", "true")
 
     email, action = bootstrap_founder(
         company_name=company_name,
         company_domain=company_domain,
-        email=email,
+        email=normalized_email,
         username=username,
         password=password,
         display_name=display_name,

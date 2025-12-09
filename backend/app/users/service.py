@@ -1,9 +1,33 @@
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.security.password import hash_password
 from app.users.models import User
 from app.users.schemas import PasswordSet, UserAdminUpdate, UserCreate, UserUpdate
+from app.utils.email import normalize_email
+
+
+def _ensure_unique(
+    session: Session,
+    *,
+    email: str | None = None,
+    username: str | None = None,
+    exclude_id: str | None = None,
+) -> None:
+    if email:
+        email_query = select(User.id).where(func.lower(User.email) == email)
+        if exclude_id:
+            email_query = email_query.where(User.id != exclude_id)
+        if session.exec(email_query).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use")
+
+    if username:
+        username_query = select(User.id).where(User.username == username)
+        if exclude_id:
+            username_query = username_query.where(User.id != exclude_id)
+        if session.exec(username_query).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already in use")
 
 
 def _normalize_email(email: str) -> str:
@@ -33,7 +57,7 @@ def _ensure_unique(
 
 
 def create_user(payload: UserCreate, session: Session, company_id: str) -> User:
-    email = _normalize_email(payload.email)
+    email = normalize_email(payload.email)
     username = (payload.username or email).strip()
     _ensure_unique(session, email=email, username=username)
     user = User(
@@ -54,7 +78,7 @@ def update_profile(payload: UserUpdate, session: Session, current_user: User) ->
     changed = False
 
     if payload.email:
-        email = _normalize_email(payload.email)
+        email = normalize_email(payload.email)
         if email != current_user.email:
             _ensure_unique(session, email=email, exclude_id=current_user.id)
             current_user.email = email
@@ -91,7 +115,7 @@ def update_user_admin(
     changed = False
 
     if payload.email:
-        email = _normalize_email(payload.email)
+        email = normalize_email(payload.email)
         if email != target.email:
             _ensure_unique(session, email=email, exclude_id=target.id)
             target.email = email
