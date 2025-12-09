@@ -21,19 +21,27 @@ def _env_flag(name: str, default: str = "true") -> bool:
     return os.getenv(name, default).lower() not in {"0", "false", "no"}
 
 
+def _get_env(*keys: str) -> str | None:
+    for key in keys:
+        value = os.getenv(key)
+        if value:
+            return value
+    return None
+
+
 def bootstrap_founder_from_env() -> None:
     """Create or update a founder account when env vars are provided."""
 
-    email = os.getenv("BOOTSTRAP_FOUNDER_EMAIL")
-    password = os.getenv("BOOTSTRAP_FOUNDER_PASSWORD")
-    company_name = os.getenv("BOOTSTRAP_FOUNDER_COMPANY")
-    company_domain = os.getenv("BOOTSTRAP_FOUNDER_DOMAIN")
+    email = _get_env("BOOTSTRAP_FOUNDER_EMAIL", "BOOTSTRAP_EMAIL")
+    password = _get_env("BOOTSTRAP_FOUNDER_PASSWORD", "BOOTSTRAP_PASSWORD")
+    company_name = _get_env("BOOTSTRAP_FOUNDER_COMPANY", "BOOTSTRAP_COMPANY")
+    company_domain = _get_env("BOOTSTRAP_FOUNDER_DOMAIN", "BOOTSTRAP_DOMAIN")
 
     if not all([email, password, company_name, company_domain]):
         return
 
-    display_name = os.getenv("BOOTSTRAP_FOUNDER_NAME") or email
-    username = os.getenv("BOOTSTRAP_FOUNDER_USERNAME") or email
+    display_name = _get_env("BOOTSTRAP_FOUNDER_NAME", "BOOTSTRAP_NAME") or email
+    username = _get_env("BOOTSTRAP_FOUNDER_USERNAME", "BOOTSTRAP_USERNAME") or email
     allow_updates = _env_flag("BOOTSTRAP_FOUNDER_UPDATE", "true")
 
     with Session(engine) as session:
