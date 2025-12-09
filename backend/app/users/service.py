@@ -30,6 +30,32 @@ def _ensure_unique(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already in use")
 
 
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _ensure_unique(
+    session: Session,
+    *,
+    email: str | None = None,
+    username: str | None = None,
+    exclude_id: str | None = None,
+) -> None:
+    if email:
+        email_query = select(User.id).where(User.email == email)
+        if exclude_id:
+            email_query = email_query.where(User.id != exclude_id)
+        if session.exec(email_query).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use")
+
+    if username:
+        username_query = select(User.id).where(User.username == username)
+        if exclude_id:
+            username_query = username_query.where(User.id != exclude_id)
+        if session.exec(username_query).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already in use")
+
+
 def create_user(payload: UserCreate, session: Session, company_id: str) -> User:
     email = normalize_email(payload.email)
     username = (payload.username or email).strip()
