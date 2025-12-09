@@ -9,6 +9,7 @@ from app.incidents.routes import router as incidents_router
 from app.documents.routes import router as documents_router
 from app.tickets.routes import router as tickets_router
 from app.admin.routes import router as admin_router
+from app.bootstrap import bootstrap_founder_from_env
 from app.middleware.logging import install_logging_middleware
 from app.middleware.rate_limit import install_rate_limit_middleware
 from app.middleware.tenant import install_tenant_middleware
@@ -22,6 +23,7 @@ app = FastAPI(title="Phill API", version="0.1.0")
 @app.on_event("startup")
 def on_startup() -> None:
     create_db_and_tables()
+    bootstrap_founder_from_env()
 
 # Install middleware stack
 install_logging_middleware(app)

@@ -27,49 +27,45 @@ export default function AdminHomePage() {
             <span className="pill">Admin</span>
             <span className="pill pill-outline">Workspace</span>
           </div>
-          <h1 style={{ margin: 0 }}>Admin tools</h1>
+          <h1 style={{ margin: 0 }}>Phill AI command center</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Focused controls for your team. Technical diagnostics stay separate so day-to-day views stay clean.
+            Keep the focus on Phill AI: jump into the AI workspace or manage the training files it relies on. Other
+            admin tools stay close by without crowding the main screen.
           </p>
         </div>
 
         <div className="grid two-col" style={{ gap: "1rem" }}>
           <AdminCard
-            title="System health"
-            description="Check database, SMTP, and AI readiness at a glance."
-            href="/admin/system"
-            badge="Status"
-          />
-          <AdminCard
-            title="Diagnostics"
-            description="View raw payloads, latency details, and copy helpers for support."
-            href="/admin/diagnostics"
-            badge="Advanced"
-          />
-          <AdminCard
-            title="Training files"
-            description="Review, scope, or remove uploaded AI documents."
-            href="/admin/documents"
+            title="Phill AI workspace"
+            description="Open Phill AI to chat, triage responses, and attach the right training files."
+            href="/ai"
             badge="AI"
           />
           <AdminCard
-            title="Users"
-            description="List company users, add teammates, or reset passwords."
-            href="/admin/users"
-            badge="Accounts"
+            title="Training files"
+            description="Review uploads, scope access, and keep Phill trained with the latest documents."
+            href="/admin/documents"
+            badge="Training"
           />
-          <AdminCard
-            title="Requests"
-            description="Review access and password reset submissions from the login page."
-            href="/admin/requests"
-            badge="Auth"
-          />
-          <AdminCard
-            title="Email"
-            description="Send a quick SMTP test before enabling notifications."
-            href="/admin/email"
-            badge="Notifications"
-          />
+        </div>
+
+        <div className="chip-row" style={{ gap: "0.6rem", flexWrap: "wrap" }}>
+          <span className="tiny muted">More tools:</span>
+          <a className="chip ghost" href="/admin/email">
+            Email templates
+          </a>
+          <a className="chip ghost" href="/admin/system">
+            AI readiness
+          </a>
+          <a className="chip ghost" href="/admin/users">
+            Accounts & access
+          </a>
+          <a className="chip ghost" href="/admin/diagnostics">
+            Diagnostics
+          </a>
+          <a className="chip ghost" href="/admin/requests">
+            Requests
+          </a>
         </div>
       </section>
     </AdminWall>
