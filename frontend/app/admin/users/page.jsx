@@ -40,6 +40,7 @@ export default function AdminUsersPage() {
   const [editDrafts, setEditDrafts] = useState({});
   const [editStatus, setEditStatus] = useState({});
   const [welcomeStatus, setWelcomeStatus] = useState({});
+  const [deleteStatus, setDeleteStatus] = useState({});
   const [lastLoaded, setLastLoaded] = useState(null);
   const cancelRef = useRef(false);
 
@@ -49,6 +50,18 @@ export default function AdminUsersPage() {
     () => ROLE_OPTIONS.filter((option) => !currentUser || canAssign(currentUser.role, option.value)),
     [currentUser],
   );
+
+  const canManageUser = (user) =>
+    currentUser &&
+    canAssign(currentUser.role, user.role) &&
+    (isFounder || user.company_id === currentUser.company_id);
+
+  const deleteRestriction = (user) => {
+    if (!currentUser) return "Sign in required";
+    if (currentUser.id === user.id) return "You cannot delete your own account";
+    if (!canManageUser(user)) return "You can only delete accounts within your scope";
+    return null;
+  };
 
   const canSubmit = useMemo(() => {
     return form.name.trim() && form.email.trim() && form.password.trim();
@@ -212,39 +225,55 @@ export default function AdminUsersPage() {
     }
   };
 
-  const sendWelcomeEmail = async (userId) => {
-    updateWelcomeStatus(userId, { state: "sending" });
+  const sendWelcomeEmail = async (user) => {
+    if (!canManageUser(user)) {
+      updateWelcomeStatus(user.id, {
+        state: "error",
+        message: "You can only email accounts within your scope",
+      });
+      return;
+    }
+
+    updateWelcomeStatus(user.id, { state: "sending" });
     try {
       const res = await fetchWithAuth("/api/admin/email/welcome", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({ user_id: user.id }),
       });
 
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
-        updateWelcomeStatus(userId, {
+        updateWelcomeStatus(user.id, {
           state: "error",
           message: detail?.detail || `Unable to send welcome (${res.status})`,
         });
         return;
       }
 
-      updateWelcomeStatus(userId, { state: "success", message: "Welcome email sent" });
+      updateWelcomeStatus(user.id, { state: "success", message: "Welcome email sent" });
     } catch (error) {
-      updateWelcomeStatus(userId, {
+      updateWelcomeStatus(user.id, {
         state: "error",
         message: error instanceof Error ? error.message : "Failed to send email",
       });
     }
   };
 
-  const handleSetPassword = async (userId) => {
-    const password = passwords[userId];
+  const handleSetPassword = async (user) => {
+    if (!canManageUser(user)) {
+      updatePasswordStatus(user.id, {
+        state: "error",
+        message: "You can only manage passwords for accounts within your scope",
+      });
+      return;
+    }
+
+    const password = passwords[user.id];
     if (!password?.trim()) return;
-    updatePasswordStatus(userId, { state: "saving" });
+    updatePasswordStatus(user.id, { state: "saving" });
     try {
-      const res = await fetchWithAuth(`/api/users/${userId}/password`, {
+      const res = await fetchWithAuth(`/api/users/${user.id}/password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -252,17 +281,17 @@ export default function AdminUsersPage() {
 
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
-        updatePasswordStatus(userId, {
+        updatePasswordStatus(user.id, {
           state: "error",
           message: detail?.detail || `Unable to set password (${res.status})`,
         });
         return;
       }
 
-      setPasswords((prev) => ({ ...prev, [userId]: "" }));
-      updatePasswordStatus(userId, { state: "success", message: "Password updated" });
+      setPasswords((prev) => ({ ...prev, [user.id]: "" }));
+      updatePasswordStatus(user.id, { state: "success", message: "Password updated" });
     } catch (error) {
-      updatePasswordStatus(userId, {
+      updatePasswordStatus(user.id, {
         state: "error",
         message: error instanceof Error ? error.message : "Failed to set password",
       });
@@ -274,6 +303,7 @@ export default function AdminUsersPage() {
       ...prev,
       [user.id]: {
         name: user.name || "",
+        email: user.email || "",
         username: user.username || "",
         role: user.role,
         company_id: user.company_id,
@@ -294,6 +324,14 @@ export default function AdminUsersPage() {
   const saveEdit = async (userId) => {
     const draft = editDrafts[userId];
     if (!draft) return;
+    const target = users.find((user) => user.id === userId);
+    if (!target || !canManageUser(target)) {
+      setEditStatus((prev) => ({
+        ...prev,
+        [userId]: { state: "error", message: "You can only edit roles within your scope" },
+      }));
+      return;
+    }
     setEditStatus((prev) => ({ ...prev, [userId]: { state: "saving" } }));
     try {
       const res = await fetchWithAuth(`/api/users/${userId}`, {
@@ -301,6 +339,7 @@ export default function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: draft.name,
+          email: draft.email,
           username: draft.username,
           role: draft.role,
           company_id: isFounder ? draft.company_id : undefined,
@@ -325,6 +364,44 @@ export default function AdminUsersPage() {
         [userId]: {
           state: "error",
           message: error instanceof Error ? error.message : "Unable to update user",
+        },
+      }));
+    }
+  };
+
+  const deleteUser = async (user) => {
+    const restriction = deleteRestriction(user);
+    if (restriction) {
+      setDeleteStatus((prev) => ({
+        ...prev,
+        [user.id]: { state: "error", message: restriction },
+      }));
+      return;
+    }
+
+    const confirmDelete = window.confirm(`Delete ${user.name || user.email}? This cannot be undone.`);
+    if (!confirmDelete) return;
+
+    setDeleteStatus((prev) => ({ ...prev, [user.id]: { state: "saving" } }));
+    try {
+      const res = await fetchWithAuth(`/api/users/${user.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        setDeleteStatus((prev) => ({
+          ...prev,
+          [user.id]: { state: "error", message: detail?.detail || `Unable to delete (${res.status})` },
+        }));
+        return;
+      }
+
+      setUsers((prev) => prev.filter((item) => item.id !== user.id));
+      setDeleteStatus((prev) => ({ ...prev, [user.id]: { state: "success", message: "Account deleted" } }));
+    } catch (error) {
+      setDeleteStatus((prev) => ({
+        ...prev,
+        [user.id]: {
+          state: "error",
+          message: error instanceof Error ? error.message : "Unable to delete user",
         },
       }));
     }
@@ -510,6 +587,9 @@ export default function AdminUsersPage() {
               {filteredUsers.map((user) => {
                 const draft = editDrafts[user.id];
                 const editing = Boolean(draft);
+                const manageable = canManageUser(user);
+                const restriction = deleteRestriction(user);
+                const deletable = !restriction;
                 const companyName =
                   user.company_name || companyMap.get(user.company_id) || user.company_id || "Company";
                 return (
@@ -526,7 +606,18 @@ export default function AdminUsersPage() {
                           type="text"
                           value={editing ? draft.name : user.name}
                           onChange={(event) => handleEditChange(user.id, "name", event.target.value)}
-                          onFocus={() => !editing && startEdit(user)}
+                          onFocus={() => manageable && !editing && startEdit(user)}
+                          disabled={!manageable}
+                        />
+                      </label>
+                      <label className="stack" style={{ gap: "0.25rem" }}>
+                        Email
+                        <input
+                          type="email"
+                          value={editing ? draft.email : user.email || ""}
+                          onChange={(event) => handleEditChange(user.id, "email", event.target.value)}
+                          onFocus={() => manageable && !editing && startEdit(user)}
+                          disabled={!manageable}
                         />
                       </label>
                       <label className="stack" style={{ gap: "0.25rem" }}>
@@ -535,7 +626,8 @@ export default function AdminUsersPage() {
                           type="text"
                           value={editing ? draft.username : user.username || ""}
                           onChange={(event) => handleEditChange(user.id, "username", event.target.value)}
-                          onFocus={() => !editing && startEdit(user)}
+                          onFocus={() => manageable && !editing && startEdit(user)}
+                          disabled={!manageable}
                         />
                       </label>
                       <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
@@ -544,7 +636,8 @@ export default function AdminUsersPage() {
                           <select
                             value={editing ? draft.role : user.role}
                             onChange={(event) => handleEditChange(user.id, "role", event.target.value)}
-                            onFocus={() => !editing && startEdit(user)}
+                            onFocus={() => manageable && !editing && startEdit(user)}
+                            disabled={!manageable}
                           >
                             {filteredRoleOptions.map((option) => (
                               <option key={option.value} value={option.value}>
@@ -559,7 +652,8 @@ export default function AdminUsersPage() {
                             <select
                               value={editing ? draft.company_id : user.company_id}
                               onChange={(event) => handleEditChange(user.id, "company_id", event.target.value)}
-                              onFocus={() => !editing && startEdit(user)}
+                              onFocus={() => manageable && !editing && startEdit(user)}
+                              disabled={!manageable}
                             >
                               {companies.map((company) => (
                                 <option key={company.id} value={company.id}>
@@ -576,7 +670,7 @@ export default function AdminUsersPage() {
                             type="button"
                             className="secondary"
                             onClick={() => saveEdit(user.id)}
-                            disabled={editStatus[user.id]?.state === "saving"}
+                            disabled={editStatus[user.id]?.state === "saving" || !manageable}
                           >
                             {editStatus[user.id]?.state === "saving" ? "Saving…" : "Save changes"}
                           </button>
@@ -590,6 +684,7 @@ export default function AdminUsersPage() {
                                 return next;
                               })
                             }
+                            disabled={!manageable}
                           >
                             Cancel
                           </button>
@@ -601,6 +696,9 @@ export default function AdminUsersPage() {
                           <span className="tiny status-error">{editStatus[user.id]?.message}</span>
                         )}
                       </div>
+                      {!manageable && (
+                        <span className="tiny muted">You can only manage accounts within your company and role tier.</span>
+                      )}
                     </div>
                     <div className="stack" style={{ gap: "0.35rem" }}>
                       <label className="stack" style={{ gap: "0.25rem" }}>
@@ -611,14 +709,15 @@ export default function AdminUsersPage() {
                           onChange={(event) => handlePasswordInput(user.id, event.target.value)}
                           placeholder="Temporary password"
                           autoComplete="new-password"
+                          disabled={!manageable}
                         />
                       </label>
                       <div className="chip-row" style={{ gap: "0.35rem", justifyContent: "space-between" }}>
                         <button
                           type="button"
                           className="secondary"
-                          onClick={() => handleSetPassword(user.id)}
-                          disabled={!passwords[user.id]?.trim() || passwordStatus[user.id]?.state === "saving"}
+                          onClick={() => handleSetPassword(user)}
+                          disabled={!manageable || !passwords[user.id]?.trim() || passwordStatus[user.id]?.state === "saving"}
                         >
                           {passwordStatus[user.id]?.state === "saving" ? "Saving…" : "Set password"}
                         </button>
@@ -635,8 +734,8 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           className="ghost"
-                          onClick={() => sendWelcomeEmail(user.id)}
-                          disabled={welcomeStatus[user.id]?.state === "sending"}
+                          onClick={() => sendWelcomeEmail(user)}
+                          disabled={!manageable || welcomeStatus[user.id]?.state === "sending"}
                         >
                           {welcomeStatus[user.id]?.state === "sending" ? "Sending…" : "Send welcome email"}
                         </button>
@@ -646,6 +745,24 @@ export default function AdminUsersPage() {
                           )}
                           {welcomeStatus[user.id]?.state === "error" && (
                             <span className="tiny status-error">{welcomeStatus[user.id]?.message}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="chip-row" style={{ gap: "0.35rem", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          className="danger ghost"
+                          onClick={() => deleteUser(user)}
+                          disabled={!deletable || deleteStatus[user.id]?.state === "saving"}
+                        >
+                          {deleteStatus[user.id]?.state === "saving" ? "Deleting…" : "Delete user"}
+                        </button>
+                        <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                          {deleteStatus[user.id]?.state === "success" && (
+                            <span className="tiny status-success">{deleteStatus[user.id]?.message}</span>
+                          )}
+                          {deleteStatus[user.id]?.state === "error" && (
+                            <span className="tiny status-error">{deleteStatus[user.id]?.message}</span>
                           )}
                         </div>
                       </div>

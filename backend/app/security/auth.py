@@ -46,9 +46,18 @@ class TokenLoginPayload(BaseModel):
     password: str
 
 
+def _normalize_identifier(identifier: str) -> str:
+    normalized = identifier.strip()
+    if "@" in normalized:
+        return normalized.lower()
+    return normalized
+
+
 def _authenticate(identifier: str, password: str, session: Session) -> User:
+    normalized_identifier = _normalize_identifier(identifier)
     user = session.exec(
-        select(User).where(or_(User.username == identifier, User.email == identifier))
+        select(User)
+        .where(or_(User.username == normalized_identifier, User.email == normalized_identifier))
     ).first()
     if not user or not verify_password(password, user.password_hash) or user.disabled:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
@@ -118,16 +127,6 @@ def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_
     }
 
 
-@router.post("/login")
-def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_session)) -> dict[str, str]:
-    user = _authenticate(payload.email, payload.password, session)
-    return {
-        "access_token": create_access_token(user.id),
-        "refresh_token": create_refresh_token(user.id),
-        "token_type": "bearer",
-    }
-
-
 @router.post("/refresh")
 def refresh_access_token(
     refresh_token: str = Body(embed=True), session: Session = Depends(get_session)
@@ -167,15 +166,16 @@ async def request_password_reset(
     request: Request,
     session: Session = Depends(get_session),
 ) -> dict[str, str]:
+    normalized_email = _normalize_identifier(payload.email)
     record = PasswordResetRequest(
-        email=payload.email,
+        email=normalized_email,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
         created_at=datetime.utcnow(),
     )
     session.add(record)
 
-    user = session.exec(select(User).where(User.email == payload.email)).first()
+    user = session.exec(select(User).where(User.email == normalized_email)).first()
     debug_token: str | None = None
     email_status = "skipped"
     if user:
@@ -221,8 +221,9 @@ async def request_access(
     request: Request,
     session: Session = Depends(get_session),
 ) -> dict[str, str]:
+    normalized_email = _normalize_identifier(payload.email)
     record = AccessRequest(
-        email=payload.email,
+        email=normalized_email,
         note=payload.note,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
