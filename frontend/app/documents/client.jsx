@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import AuthWall from "../../components/AuthWall";
 import { fetchWithAuth } from "../../lib/api";
-import { loadTokens, preferenceKey } from "../../lib/auth";
+import { decodeAccessPayload, loadTokens, preferenceKey } from "../../lib/auth";
 import { formatDateTime, formatRelative, formatTime, safeDate } from "../../lib/dates";
 
 const filters = [
@@ -71,6 +71,11 @@ function DocumentCard({ doc }) {
           <span className={`pill ${doc.scope === "global" ? "pill-success" : "pill-soft"}`}>
             {doc.scope === "global" ? "Global training" : "Company"}
           </span>
+          {(doc.owner_company_name || doc.owner_company_id) && (
+            <span className="pill pill-outline">
+              {doc.owner_company_name || doc.owner_company_id}
+            </span>
+          )}
         </div>
         <span className="tiny muted" style={{ whiteSpace: "nowrap" }}>
           {formatDateTime(created)}
@@ -137,6 +142,9 @@ function DocumentSkeleton() {
 export default function DocumentsClient({ session }) {
   const [tokens] = useState(() => session || loadTokens());
   const prefKey = (name) => preferenceKey(name, tokens);
+  const userPayload = useMemo(() => decodeAccessPayload(tokens?.access_token), [tokens]);
+  const isFounder = userPayload?.role === "founder";
+  const myCompanyId = userPayload?.company_id || "";
   const [documents, setDocuments] = useState([]);
   const [state, setState] = useState({ status: "idle" });
   const [filter, setFilter] = useState(() => {
@@ -146,6 +154,16 @@ export default function DocumentsClient({ session }) {
       return filters.some((item) => item.value === saved.filter) ? saved.filter : "all";
     } catch (error) {
       console.warn("Unable to read document filter preference", error);
+      return "all";
+    }
+  });
+  const [companyFilter, setCompanyFilter] = useState(() => {
+    if (typeof window === "undefined") return "all";
+    try {
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-doc-prefs")) || "{}");
+      return typeof saved.companyFilter === "string" ? saved.companyFilter : "all";
+    } catch (error) {
+      console.warn("Unable to read document company preference", error);
       return "all";
     }
   });
@@ -171,7 +189,18 @@ export default function DocumentsClient({ session }) {
     }
   });
   const [uploadScope, setUploadScope] = useState("company");
+  const [uploadCompany, setUploadCompany] = useState(() => {
+    if (typeof window === "undefined") return myCompanyId || "";
+    try {
+      const saved = JSON.parse(localStorage.getItem(prefKey("phill-doc-prefs")) || "{}");
+      return typeof saved.uploadCompany === "string" ? saved.uploadCompany : myCompanyId || "";
+    } catch (error) {
+      console.warn("Unable to read upload company preference", error);
+      return myCompanyId || "";
+    }
+  });
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
+  const [companies, setCompanies] = useState({ state: "idle", items: [], message: "" });
   const fileInputRef = useRef(null);
 
   const filteredDocs = useMemo(() => {
@@ -200,12 +229,12 @@ export default function DocumentsClient({ session }) {
     try {
       localStorage.setItem(
         prefKey("phill-doc-prefs"),
-        JSON.stringify({ filter, query, sort })
+        JSON.stringify({ filter, query, sort, companyFilter, uploadCompany })
       );
     } catch (error) {
       console.warn("Unable to persist document preferences", error);
     }
-  }, [filter, query, sort]);
+  }, [filter, query, sort, companyFilter, uploadCompany]);
 
   const totalCount = documents.length;
   const shownCount = visibleDocs.length;
@@ -218,8 +247,15 @@ export default function DocumentsClient({ session }) {
     let cancelled = false;
     const fetchDocs = async () => {
       setState({ status: "loading" });
+      const params = new URLSearchParams();
+      if (isFounder && companyFilter && companyFilter !== "all") {
+        params.set("company_id", companyFilter);
+      }
+
       try {
-        const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
+        const res = await fetchWithAuth(`/ai/documents${params.toString() ? `?${params.toString()}` : ""}`, {
+          headers: { Accept: "application/json" },
+        });
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
           const message = payload?.detail || `Request failed (${res.status})`;
@@ -241,13 +277,17 @@ export default function DocumentsClient({ session }) {
     return () => {
       cancelled = true;
     };
-  }, [tokens]);
+  }, [tokens, companyFilter, isFounder]);
 
   const handleRefresh = async () => {
     if (!tokens) return;
     setState({ status: "loading" });
     try {
-      const res = await fetchWithAuth("/ai/documents", { headers: { Accept: "application/json" } });
+      const params = new URLSearchParams();
+      if (isFounder && companyFilter && companyFilter !== "all") params.set("company_id", companyFilter);
+      const res = await fetchWithAuth(`/ai/documents${params.toString() ? `?${params.toString()}` : ""}`, {
+        headers: { Accept: "application/json" },
+      });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
         const message = payload?.detail || `Request failed (${res.status})`;
@@ -276,6 +316,7 @@ export default function DocumentsClient({ session }) {
     try {
       const formData = new FormData();
       formData.append("scope", uploadScope);
+      if (isFounder && uploadCompany) formData.append("company_id", uploadCompany);
       files.forEach((file) => formData.append("files", file));
 
       const res = await fetchWithAuth("/ai/documents", { method: "POST", body: formData });
@@ -297,6 +338,49 @@ export default function DocumentsClient({ session }) {
       if (event?.target) event.target.value = "";
     }
   };
+
+  useEffect(() => {
+    if (!tokens || !isFounder) return;
+    let cancelled = false;
+    const loadCompanies = async () => {
+      setCompanies({ state: "loading", items: [], message: "" });
+      try {
+        const res = await fetchWithAuth("/companies", { headers: { Accept: "application/json" } });
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          const message = payload?.detail || `Unable to load companies (${res.status})`;
+          if (!cancelled) setCompanies({ state: "error", items: [], message });
+          return;
+        }
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : [];
+        if (!cancelled) {
+          setCompanies({ state: "ready", items, message: "" });
+          if (!uploadCompany && myCompanyId) setUploadCompany(myCompanyId);
+        }
+      } catch (error) {
+        if (!cancelled)
+          setCompanies({
+            state: "error",
+            items: [],
+            message: error instanceof Error ? error.message : "Unable to load companies",
+          });
+      }
+    };
+    loadCompanies();
+    return () => {
+      cancelled = true;
+    };
+  }, [tokens, isFounder, myCompanyId]);
+
+  useEffect(() => {
+    if (!isFounder) {
+      setCompanyFilter("all");
+      setUploadCompany(myCompanyId || "");
+    }
+  }, [isFounder, myCompanyId]);
+
+  const companyLookup = useMemo(() => Object.fromEntries(companies.items.map((item) => [item.id, item.name])), [companies]);
 
   return (
     <AuthWall session={tokens} title="Training documents" description="Signed-in users can review uploaded AI files.">
@@ -357,6 +441,30 @@ export default function DocumentsClient({ session }) {
                 </button>
                 <span className="tiny muted">Pick PDFs, images, slides, spreadsheets, or text files together.</span>
               </div>
+              {isFounder && (
+                <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+                  <label className="tiny muted" htmlFor="upload-company">
+                    Upload into company
+                  </label>
+                  <select
+                    id="upload-company"
+                    value={uploadCompany || ""}
+                    onChange={(event) => setUploadCompany(event.target.value)}
+                    disabled={companies.state === "loading"}
+                  >
+                    <option value="">My company {myCompanyId ? `(${myCompanyId})` : ""}</option>
+                    {companies.items.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name} {company.domain ? `(${company.domain})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {companies.state === "error" && companies.message && (
+                    <span className="status-error tiny">{companies.message}</span>
+                  )}
+                  {companies.state === "loading" && <span className="tiny muted">Loading companies…</span>}
+                </div>
+              )}
               {uploadStatus.state === "loading" && (
                 <div className="status-info" aria-live="polite">{uploadStatus.message || "Uploading…"}</div>
               )}
@@ -367,9 +475,9 @@ export default function DocumentsClient({ session }) {
                 <div className="status-error" aria-live="polite">{uploadStatus.message}</div>
               )}
             </div>
-            <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-              <div className="chip-row" role="radiogroup" aria-label="Filter documents by scope">
-                {filters.map((item) => (
+              <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div className="chip-row" role="radiogroup" aria-label="Filter documents by scope">
+                  {filters.map((item) => (
                   <button
                     key={item.value}
                     type="button"
@@ -418,12 +526,41 @@ export default function DocumentsClient({ session }) {
                     setFilter("all");
                     setQuery("");
                     setSort("newest");
+                    setCompanyFilter("all");
                   }}
                 >
                   Reset filters
                 </button>
               </div>
             </div>
+            {isFounder && (
+              <div className="chip-row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                <label className="tiny muted" htmlFor="company-filter">
+                  Company view
+                </label>
+                <select
+                  id="company-filter"
+                  value={companyFilter}
+                  onChange={(event) => setCompanyFilter(event.target.value)}
+                  disabled={companies.state === "loading"}
+                >
+                  <option value="all">All companies</option>
+                  {companies.items.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name} {company.domain ? `(${company.domain})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <span className="tiny muted">
+                  {companyFilter === "all"
+                    ? "Showing training files from every company"
+                    : `Filtering to ${companyLookup[companyFilter] || companyFilter}`}
+                </span>
+                {companies.state === "error" && companies.message && (
+                  <span className="tiny status-error">{companies.message}</span>
+                )}
+              </div>
+            )}
             <div className="stack" style={{ gap: "0.35rem" }}>
               <label className="tiny muted" htmlFor="document-search">
                 Search by file name, scope, or excerpt
