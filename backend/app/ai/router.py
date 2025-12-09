@@ -27,15 +27,33 @@ from app.companies.models import Company
 router = APIRouter()
 
 
-def _resolve_company_id(requested: str | None, current_user: User) -> str:
-    target_company = requested or current_user.company_id
-    if not target_company:
+def _resolve_company_ids(
+    requested: list[str] | None,
+    fallback: str | None,
+    current_user: User,
+) -> list[str]:
+    requested_ids = [value.strip() for value in (requested or []) if value and value.strip()]
+
+    if requested_ids and not has_role(current_user.role, ROLE_FOUNDER):
+        if current_user.company_id not in requested_ids:
+            raise HTTPException(status_code=403, detail="Cannot act on another company")
+        return [current_user.company_id]
+
+    target_company = fallback or current_user.company_id
+    if not target_company and not requested_ids:
         raise HTTPException(status_code=400, detail="User is not linked to a company")
 
-    if requested and requested != current_user.company_id and not has_role(current_user.role, ROLE_FOUNDER):
+    if requested_ids and not has_role(current_user.role, ROLE_FOUNDER):
         raise HTTPException(status_code=403, detail="Cannot act on another company")
 
-    return target_company
+    if not requested_ids:
+        return [target_company]
+
+    return sorted(set(requested_ids))
+
+
+def _resolve_company_id(requested: str | None, current_user: User) -> str:
+    return _resolve_company_ids([requested] if requested else [], requested, current_user)[0]
 
 
 def _company_names(session: Session, company_ids: set[str]) -> dict[str, str]:
@@ -121,10 +139,11 @@ async def upload_documents(
     scope: str | None = Form(default="company"),
     scopes: list[str] | None = Form(default=None, alias="scopes"),
     company_id: str | None = Form(default=None),
+    company_ids: list[str] | None = Form(default=None, alias="company_ids"),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ) -> list[DocumentPayload]:
-    target_company = _resolve_company_id(company_id, current_user)
+    target_companies = _resolve_company_ids(company_ids, company_id, current_user)
 
     upload_batch: list[UploadFile] = []
     if files:
@@ -146,7 +165,7 @@ async def upload_documents(
     settings = get_settings()
     max_size = int(settings.ai_document_max_bytes or 512_000)
     max_text = int(settings.ai_document_max_text or 20_000)
-    company_names = _company_names(session, {target_company})
+    company_names = _company_names(session, set(target_companies))
 
     for idx, upload in enumerate(upload_batch):
         target_scope = resolved_scopes[idx] if resolved_scopes else default_scope
@@ -164,20 +183,21 @@ async def upload_documents(
         trimmed_text = (text or "").strip()[:max_text]
         excerpt = trimmed_text[:300]
 
-        memory = AiMemoryCreate(
-            company_id=target_company,
-            data={
-                "type": "document",
-                "scope": target_scope,
-                "filename": upload.filename,
-                "content_type": upload.content_type,
-                "size": len(raw_bytes),
-                "text": trimmed_text,
-                "excerpt": excerpt,
-            },
-        )
-        record = _store_memory(memory, session)
-        documents.append(_document_payload(record, company_names))
+        for company in target_companies:
+            memory = AiMemoryCreate(
+                company_id=company,
+                data={
+                    "type": "document",
+                    "scope": target_scope,
+                    "filename": upload.filename,
+                    "content_type": upload.content_type,
+                    "size": len(raw_bytes),
+                    "text": trimmed_text,
+                    "excerpt": excerpt,
+                },
+            )
+            record = _store_memory(memory, session)
+            documents.append(_document_payload(record, company_names))
 
     return documents
 

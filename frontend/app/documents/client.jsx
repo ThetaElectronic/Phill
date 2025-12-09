@@ -189,14 +189,16 @@ export default function DocumentsClient({ session }) {
     }
   });
   const [uploadScope, setUploadScope] = useState("company");
-  const [uploadCompany, setUploadCompany] = useState(() => {
-    if (typeof window === "undefined") return myCompanyId || "";
+  const [uploadCompanies, setUploadCompanies] = useState(() => {
+    if (typeof window === "undefined") return myCompanyId ? [myCompanyId] : [];
     try {
       const saved = JSON.parse(localStorage.getItem(prefKey("phill-doc-prefs")) || "{}");
-      return typeof saved.uploadCompany === "string" ? saved.uploadCompany : myCompanyId || "";
+      if (Array.isArray(saved.uploadCompanies)) return saved.uploadCompanies.filter(Boolean);
+      if (typeof saved.uploadCompany === "string" && saved.uploadCompany) return [saved.uploadCompany];
+      return myCompanyId ? [myCompanyId] : [];
     } catch (error) {
       console.warn("Unable to read upload company preference", error);
-      return myCompanyId || "";
+      return myCompanyId ? [myCompanyId] : [];
     }
   });
   const [uploadStatus, setUploadStatus] = useState({ state: "idle" });
@@ -229,12 +231,12 @@ export default function DocumentsClient({ session }) {
     try {
       localStorage.setItem(
         prefKey("phill-doc-prefs"),
-        JSON.stringify({ filter, query, sort, companyFilter, uploadCompany })
+        JSON.stringify({ filter, query, sort, companyFilter, uploadCompanies })
       );
     } catch (error) {
       console.warn("Unable to persist document preferences", error);
     }
-  }, [filter, query, sort, companyFilter, uploadCompany]);
+  }, [filter, query, sort, companyFilter, uploadCompanies]);
 
   const totalCount = documents.length;
   const shownCount = visibleDocs.length;
@@ -316,7 +318,15 @@ export default function DocumentsClient({ session }) {
     try {
       const formData = new FormData();
       formData.append("scope", uploadScope);
-      if (isFounder && uploadCompany) formData.append("company_id", uploadCompany);
+
+      if (isFounder && uploadScope === "company") {
+        const targets = uploadCompanies.filter(Boolean);
+        if (targets.length === 0 && myCompanyId) formData.append("company_ids", myCompanyId);
+        targets.forEach((id) => formData.append("company_ids", id));
+      } else if (isFounder && myCompanyId) {
+        formData.append("company_id", myCompanyId);
+      }
+
       files.forEach((file) => formData.append("files", file));
 
       const res = await fetchWithAuth("/ai/documents", { method: "POST", body: formData });
@@ -356,7 +366,7 @@ export default function DocumentsClient({ session }) {
         const items = Array.isArray(data) ? data : [];
         if (!cancelled) {
           setCompanies({ state: "ready", items, message: "" });
-          if (!uploadCompany && myCompanyId) setUploadCompany(myCompanyId);
+          if (!uploadCompanies.length && myCompanyId) setUploadCompanies([myCompanyId]);
         }
       } catch (error) {
         if (!cancelled)
@@ -376,7 +386,7 @@ export default function DocumentsClient({ session }) {
   useEffect(() => {
     if (!isFounder) {
       setCompanyFilter("all");
-      setUploadCompany(myCompanyId || "");
+      setUploadCompanies(myCompanyId ? [myCompanyId] : []);
     }
   }, [isFounder, myCompanyId]);
 
@@ -408,8 +418,8 @@ export default function DocumentsClient({ session }) {
                     <span className="pill pill-outline">Multi-file</span>
                   </div>
                   <p className="tiny muted" style={{ margin: 0 }}>
-                    Select one or more files to add to Phill's training corpus. Choose whether they stay within your company or
-                    are available globally.
+                    Select one or more files to add to Phill's training corpus. Choose whether they stay within your company,
+                    span multiple companies, or are available Phill-wide.
                   </p>
                 </div>
                 <div className="chip-row" role="radiogroup" aria-label="Select upload scope">
@@ -436,31 +446,67 @@ export default function DocumentsClient({ session }) {
                   onChange={handleUploadChange}
                   style={{ display: "none" }}
                 />
-                <button type="button" className="secondary" onClick={openFilePicker} disabled={uploadStatus.state === "loading"}>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={openFilePicker}
+                  disabled={uploadStatus.state === "loading"}
+                >
                   {uploadStatus.state === "loading" ? "Uploading…" : "Upload files"}
                 </button>
                 <span className="tiny muted">Pick PDFs, images, slides, spreadsheets, or text files together.</span>
               </div>
               {isFounder && (
-                <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
-                  <label className="tiny muted" htmlFor="upload-company">
-                    Upload into company
-                  </label>
-                  <select
-                    id="upload-company"
-                    value={uploadCompany || ""}
-                    onChange={(event) => setUploadCompany(event.target.value)}
-                    disabled={companies.state === "loading"}
-                  >
-                    <option value="">My company {myCompanyId ? `(${myCompanyId})` : ""}</option>
-                    {companies.items.map((company) => (
-                      <option key={company.id} value={company.id}>
-                        {company.name} {company.domain ? `(${company.domain})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                <div className="stack" style={{ gap: "0.35rem" }}>
+                  <div className="chip-row" style={{ gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+                    <label className="tiny muted" htmlFor="upload-company">
+                      Upload target
+                    </label>
+                    {uploadScope === "global" ? (
+                      <span className="tiny muted">Phill-wide training (global scope)</span>
+                    ) : (
+                      <>
+                        <select
+                          id="upload-company"
+                          multiple
+                          value={uploadCompanies}
+                          onChange={(event) =>
+                            setUploadCompanies(Array.from(event.target.selectedOptions, (option) => option.value))
+                          }
+                          disabled={companies.state === "loading"}
+                          style={{ minWidth: "16rem" }}
+                        >
+                          <option value="">My company {myCompanyId ? `(${myCompanyId})` : ""}</option>
+                          {companies.items.map((company) => (
+                            <option key={company.id} value={company.id}>
+                              {company.name} {company.domain ? `(${company.domain})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() =>
+                            setUploadCompanies((prev) => {
+                              const isAll = companies.items.length && prev.length >= companies.items.length;
+                              if (isAll) return myCompanyId ? [myCompanyId] : [];
+                              return companies.items.map((company) => company.id);
+                            })
+                          }
+                          disabled={companies.state === "loading"}
+                        >
+                          {companies.items.length && uploadCompanies.length >= companies.items.length
+                            ? "Clear selection"
+                            : "Select all companies"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                   {companies.state === "error" && companies.message && (
                     <span className="status-error tiny">{companies.message}</span>
+                  )}
+                  {uploadScope === "company" && uploadCompanies.length === 0 && (
+                    <span className="tiny status-info">No company selected—defaults to your company.</span>
                   )}
                   {companies.state === "loading" && <span className="tiny muted">Loading companies…</span>}
                 </div>
@@ -475,7 +521,7 @@ export default function DocumentsClient({ session }) {
                 <div className="status-error" aria-live="polite">{uploadStatus.message}</div>
               )}
             </div>
-              <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+            <div className="chip-row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
                 <div className="chip-row" role="radiogroup" aria-label="Filter documents by scope">
                   {filters.map((item) => (
                   <button
