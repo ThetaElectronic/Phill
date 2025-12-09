@@ -56,7 +56,12 @@ export default function AdminUsersPage() {
     canAssign(currentUser.role, user.role) &&
     (isFounder || user.company_id === currentUser.company_id);
 
-  const canDeleteUser = (user) => canManageUser(user) && currentUser?.id !== user.id;
+  const deleteRestriction = (user) => {
+    if (!currentUser) return "Sign in required";
+    if (currentUser.id === user.id) return "You cannot delete your own account";
+    if (!canManageUser(user)) return "You can only delete accounts within your scope";
+    return null;
+  };
 
   const canSubmit = useMemo(() => {
     return form.name.trim() && form.email.trim() && form.password.trim();
@@ -363,10 +368,11 @@ export default function AdminUsersPage() {
   };
 
   const deleteUser = async (user) => {
-    if (!canDeleteUser(user)) {
+    const restriction = deleteRestriction(user);
+    if (restriction) {
       setDeleteStatus((prev) => ({
         ...prev,
-        [user.id]: { state: "error", message: "You can only delete accounts within your scope" },
+        [user.id]: { state: "error", message: restriction },
       }));
       return;
     }
@@ -580,7 +586,8 @@ export default function AdminUsersPage() {
                 const draft = editDrafts[user.id];
                 const editing = Boolean(draft);
                 const manageable = canManageUser(user);
-                const deletable = canDeleteUser(user);
+                const restriction = deleteRestriction(user);
+                const deletable = !restriction;
                 const companyName =
                   user.company_name || companyMap.get(user.company_id) || user.company_id || "Company";
                 return (
