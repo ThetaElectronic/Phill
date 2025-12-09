@@ -1,64 +1,8 @@
 from __future__ import annotations
 
 import argparse
-from uuid import uuid4
 
-from sqlmodel import Session, select
-
-from app.companies.models import Company
-from app.db import engine
-from app.security.password import hash_password
-from app.users.models import User
-from app.users.permissions import ROLE_FOUNDER
-
-
-def bootstrap_founder(
-    *,
-    company_name: str,
-    company_domain: str,
-    email: str,
-    username: str | None,
-    password: str,
-    display_name: str | None = None,
-    update_if_exists: bool = False,
-) -> tuple[str, str]:
-    """Create or update a founder account and ensure the company is present.
-
-    Returns (email, action) where action is "created", "updated", or "exists".
-    """
-
-    with Session(engine) as session:
-        company = session.exec(select(Company).where(Company.domain == company_domain)).first()
-        if not company:
-            company = Company(id=str(uuid4()), name=company_name, domain=company_domain)
-            session.add(company)
-
-        user = session.exec(select(User).where(User.email == email)).first()
-        if user:
-            if update_if_exists:
-                user.company_id = company.id
-                user.username = username or user.username or email
-                user.name = display_name or user.name or username or email
-                user.role = ROLE_FOUNDER
-                user.password_hash = hash_password(password)
-                session.add(user)
-                session.commit()
-                return user.email, "updated"
-
-            return user.email, "exists"
-
-        founder = User(
-            id=str(uuid4()),
-            company_id=company.id,
-            email=email,
-            username=username or email,
-            name=display_name or username or email,
-            role=ROLE_FOUNDER,
-            password_hash=hash_password(password),
-        )
-        session.add(founder)
-        session.commit()
-        return founder.email, "created"
+from app.bootstrap import bootstrap_founder
 
 
 def main() -> None:

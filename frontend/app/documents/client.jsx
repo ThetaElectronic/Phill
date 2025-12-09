@@ -71,6 +71,11 @@ function DocumentCard({ doc }) {
           <span className={`pill ${doc.scope === "global" ? "pill-success" : "pill-soft"}`}>
             {doc.scope === "global" ? "Global training" : "Company"}
           </span>
+          {(doc.owner_company_name || doc.owner_company_id) && (
+            <span className="pill pill-outline">
+              {doc.owner_company_name || doc.owner_company_id}
+            </span>
+          )}
         </div>
         <span className="tiny muted" style={{ whiteSpace: "nowrap" }}>
           {formatDateTime(created)}
