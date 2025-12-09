@@ -88,7 +88,31 @@ async def login_for_access_token(
     user = _authenticate(identifier, secret, session)
 
     return {
-        "access_token": create_access_token(user.id),
+        "access_token": create_access_token(
+            user.id,
+            role=user.role,
+            company_id=user.company_id,
+            email=user.email,
+            name=user.name,
+            username=user.username,
+        ),
+        "refresh_token": create_refresh_token(user.id),
+        "token_type": "bearer",
+    }
+
+
+@router.post("/login")
+def login_with_email(payload: EmailLoginPayload, session: Session = Depends(get_session)) -> dict[str, str]:
+    user = _authenticate(payload.email, payload.password, session)
+    return {
+        "access_token": create_access_token(
+            user.id,
+            role=user.role,
+            company_id=user.company_id,
+            email=user.email,
+            name=user.name,
+            username=user.username,
+        ),
         "refresh_token": create_refresh_token(user.id),
         "token_type": "bearer",
     }
@@ -124,7 +148,17 @@ def refresh_access_token(
     if not user or user.disabled:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    return {"access_token": create_access_token(user.id), "token_type": "bearer"}
+    return {
+        "access_token": create_access_token(
+            user.id,
+            role=user.role,
+            company_id=user.company_id,
+            email=user.email,
+            name=user.name,
+            username=user.username,
+        ),
+        "token_type": "bearer",
+    }
 
 
 @router.post("/request-reset", status_code=status.HTTP_202_ACCEPTED)

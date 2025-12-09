@@ -120,6 +120,12 @@ body.theme-dark {
   overflow: hidden;
 }
 
+body.theme-dark .bg-grid {
+  background-color: #050915;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+}
+
 .bg-grid::before {
   content: "";
   position: absolute;
@@ -251,10 +257,10 @@ body.theme-dark .nav-label {
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-color: var(--chip-border);
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
 }
 
@@ -399,7 +405,7 @@ main {
 
 .footer {
   border-top: 1px solid var(--border);
-  background: #ffffffcc;
+  background: var(--glass);
 }
 
 .footer-grid {
