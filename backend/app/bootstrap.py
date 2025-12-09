@@ -25,8 +25,12 @@ def _env_flag(name: str, default: str = "true") -> bool:
 def _get_env(*keys: str) -> str | None:
     for key in keys:
         value = os.getenv(key)
-        if value:
-            return value
+        if value is None:
+            continue
+
+        stripped = value.strip()
+        if stripped:
+            return stripped
     return None
 
 
@@ -96,14 +100,24 @@ def bootstrap_founder_from_env() -> None:
     company_name = _get_env("BOOTSTRAP_FOUNDER_COMPANY", "BOOTSTRAP_COMPANY")
     company_domain = _get_env("BOOTSTRAP_FOUNDER_DOMAIN", "BOOTSTRAP_DOMAIN")
 
-    if not all([email, password, company_name, company_domain]):
+    required = {
+        "BOOTSTRAP_FOUNDER_EMAIL/BOOTSTRAP_EMAIL": email,
+        "BOOTSTRAP_FOUNDER_PASSWORD/BOOTSTRAP_PASSWORD": password,
+        "BOOTSTRAP_FOUNDER_COMPANY/BOOTSTRAP_COMPANY": company_name,
+        "BOOTSTRAP_FOUNDER_DOMAIN/BOOTSTRAP_DOMAIN": company_domain,
+    }
+    missing = [name for name, value in required.items() if not value]
+    if missing:
+        logger.info(
+            "Skipping founder bootstrap; missing env vars: %s", ", ".join(missing)
+        )
         return
 
     display_name = _get_env("BOOTSTRAP_FOUNDER_NAME", "BOOTSTRAP_NAME") or email
     username = _get_env("BOOTSTRAP_FOUNDER_USERNAME", "BOOTSTRAP_USERNAME") or email
     allow_updates = _env_flag("BOOTSTRAP_FOUNDER_UPDATE", "true")
 
-    bootstrap_founder(
+    email, action = bootstrap_founder(
         company_name=company_name,
         company_domain=company_domain,
         email=email,
@@ -112,3 +126,4 @@ def bootstrap_founder_from_env() -> None:
         display_name=display_name,
         update_if_exists=allow_updates,
     )
+    logger.info("Founder bootstrap %s for %s", action, email)
