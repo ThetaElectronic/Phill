@@ -98,6 +98,11 @@ def delete_user(
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    if target.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot delete your own account"
+        )
+
     if not has_role(current_user.role, target.role):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete a higher role")
 
